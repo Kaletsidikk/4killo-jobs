@@ -5,7 +5,6 @@
 
 > **STARK Official Hackathon 2026 · Team Keradion**  
 > *Aggregate jobs. Understand opportunities. Personalize the search.*  
-> **Status:** In Development
 
 ---
 
