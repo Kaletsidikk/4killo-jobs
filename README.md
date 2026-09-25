@@ -15,7 +15,7 @@ Historically, **4 Kilo** was one of the central places in Addis Ababa where job 
 Today, job discovery has moved online, but the problem of fragmentation remains.
 
 In Ethiopia, opportunities are distributed across:
-* 30+ Telegram channels
+* multiple Telegram channels
 * Company career pages
 * Public job boards
 * NGO and organizational portals
