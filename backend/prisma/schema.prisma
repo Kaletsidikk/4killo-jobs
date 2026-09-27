@@ -1,0 +1,94 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Language {
+  EN
+  AM
+}
+
+enum ExperienceLevel {
+  ENTRY
+  JUNIOR
+  MID
+  SENIOR
+  NOT_SPECIFIED
+}
+
+enum SourceType {
+  TELEGRAM_CHANNEL
+  TELEGRAM_GROUP
+  WEBSITE
+}
+
+enum SourceStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
+model Source {
+  id               String       @id @default(uuid())
+  name             String
+  identifier       String       @unique
+  type             SourceType   @default(TELEGRAM_CHANNEL)
+  status           SourceStatus @default(ACTIVE)
+  totalJobsScraped Int          @default(0)
+  lastSyncAt       DateTime?
+  errorMessage     String?
+  jobSources       JobSource[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Job {
+  id               String          @id @default(uuid())
+  title            String
+  company          String
+  location         String
+  category         String
+  employmentType   String?
+  experienceLevel  ExperienceLevel @default(NOT_SPECIFIED)
+  education        String?
+  salary           String?
+  deadline         DateTime?
+  description      String
+  requirements     String?
+  applyUrl         String?
+  applyEmail       String?
+  applyPhone       String?
+  isDirectContact  Boolean         @default(false)
+  isActive         Boolean         @default(true)
+  sources          JobSource[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model JobSource {
+  id         String   @id @default(uuid())
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  sourceId   String
+  source     Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceName String
+  messageId  Int?
+  postUrl    String
+  rawText    String
+  postedAt   DateTime
+  createdAt  DateTime @default(now())
+}
+
+model User {
+  id         String   @id @default(uuid())
+  telegramId BigInt   @unique
+  username   String?
+  firstName  String?
+  language   Language @default(EN)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
