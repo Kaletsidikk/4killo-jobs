@@ -26,10 +26,10 @@ const prisma = new PrismaClient();
     console.log('Read back:', found);
 
     // Clean up — delete the test row
-    //await prisma.source.delete({ where: { id: created.id } });
-   // console.log('Cleaned up test row. Connection works end-to-end!');
+      await prisma.source.delete({ where: { id: created.id } });
+      console.log('Cleaned up test row. Connection works end-to-end!');
   } catch (err) {
-   // console.error('Something went wrong:', err.message);
+   console.error('Something went wrong:', err.message);
   } finally {
     await prisma.$disconnect();
   }
