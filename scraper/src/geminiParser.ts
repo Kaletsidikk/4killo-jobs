@@ -130,10 +130,10 @@ ${rawText}
         const status = error?.status;
 
         if ((status === 429 || status === 503) && attempt < MAX_RETRIES) {
-          console.warn(`   ⏳ Gemini rate limit / overload (${status}). Waiting ${RETRY_DELAY_MS / 1000}s before retry ${attempt}/${MAX_RETRIES - 1}...`);
+          console.warn(`   Gemini rate limit / overload (${status}). Waiting ${RETRY_DELAY_MS / 1000}s before retry ${attempt}/${MAX_RETRIES - 1}...`);
           await this.sleep(RETRY_DELAY_MS);
         } else {
-          console.error('   ❌ Gemini Parsing Error:', error?.message || error);
+          console.error('   Gemini Parsing Error:', error?.message || error);
           return null;
         }
       }

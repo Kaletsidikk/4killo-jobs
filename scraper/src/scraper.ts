@@ -76,7 +76,7 @@ async function runScraper() {
         }
       }
     } catch (err: any) {
-      console.error(`   ⚠️ Failed to ingest from @${target.handle}:`, err?.message || err);
+      console.error(`   Failed to ingest from @${target.handle}:`, err?.message || err);
     }
   }
 
