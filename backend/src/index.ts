@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth";
 import preferenceRoutes from "./routes/preferences";
+import jobRoutes from "./routes/jobs";
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/preferences", preferenceRoutes);
+app.use("/api/jobs", jobRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({

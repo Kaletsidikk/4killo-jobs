@@ -36,3 +36,29 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
+
+/**
+ * Middleware: optionalAuth
+ * Used on public routes where auth is optional (e.g. job listing).
+ * If a valid token is present, it attaches req.user.
+ * If no token or invalid token, it simply continues without error.
+ * This allows us to show isSaved flags to logged-in users.
+ */
+export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunction): void => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token) {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (jwtSecret) {
+      try {
+        const verified = jwt.verify(token, jwtSecret) as { userId: string; telegramId: string };
+        req.user = verified;
+      } catch {
+        // Invalid token — silently ignore, treat as unauthenticated
+      }
+    }
+  }
+
+  next(); // always proceed
+};
