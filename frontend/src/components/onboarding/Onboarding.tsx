@@ -56,7 +56,10 @@ const locations = [
   "Remote",
 ];
 
-function Onboarding() {
+interface OnboardingProps {
+  onComplete: () => void;
+}
+function Onboarding({onComplete }: OnboardingProps) {
   const [step, setStep] = useState(1);
 
   const [language, setLanguage] = useState<Language | null>(null);
@@ -117,9 +120,7 @@ function Onboarding() {
 
     console.log("Preferences saved successfully");
 
-    // For now, we'll just show a success message.
-    // Later this will navigate to the Home screen.
-    alert("Preferences saved successfully!");
+    onComplete();
   } catch (err) {
     console.error("Failed to save preferences:", err);
 
@@ -128,6 +129,15 @@ function Onboarding() {
         ? err.message
         : "Failed to save preferences"
     );
+
+    // TEMPORARY: allow us to test the frontend in Chrome
+    if (import.meta.env.DEV) {
+      console.log(
+        "Development mode: continuing to Home despite API failure."
+      );
+
+      onComplete();
+    }
   } finally {
     setSubmitting(false);
   }
