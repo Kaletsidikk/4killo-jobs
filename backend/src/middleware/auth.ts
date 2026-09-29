@@ -62,3 +62,31 @@ export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunctio
 
   next(); // always proceed
 };
+
+/**
+ * Middleware: authenticateAdmin
+ * Protects admin routes by verifying the JWT token has an admin role.
+ */
+export const authenticateAdmin = (req: Request, res: Response, next: NextFunction): any => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access denied, token missing' });
+  }
+
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+
+  try {
+    const verified = jwt.verify(token, jwtSecret) as { role?: string };
+    if (verified.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied, not an admin' });
+    }
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: 'Invalid or expired admin token' });
+  }
+};
