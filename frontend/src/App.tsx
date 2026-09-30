@@ -9,6 +9,8 @@ import Saved from "./pages/Saved";
 import Settings from "./pages/Settings";
 
 import BottomNav from "./components/navigation/BottomNav";
+import type { Job } from "./types/job";
+import JobDetails from "./pages/JobDetails";
 
 function App() {
   useTelegram();
@@ -16,6 +18,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("Home");
 
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   // Show onboarding for now
   if (showOnboarding) {
@@ -25,6 +28,14 @@ function App() {
       </div>
     );
   }
+  if (selectedJob) {
+  return (
+    <JobDetails
+      job={selectedJob}
+      onBack={() => setSelectedJob(null)}
+    />
+  );
+}
 
   const renderPage = () => {
     switch (activeTab) {
@@ -39,7 +50,8 @@ function App() {
 
       case "Home":
       default:
-        return <Home />;
+        return (<Home 
+        onJobSelect={(job) => setSelectedJob(job)}/>);
     }
   };
 
