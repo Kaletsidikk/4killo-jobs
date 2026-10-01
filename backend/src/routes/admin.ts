@@ -7,6 +7,7 @@ import {
   deleteSource,
   toggleSourceStatus,
   syncSource,
+  reloadSources,
 } from '../controllers/admin.sources.controller';
 import { adminLogin } from '../controllers/admin.auth.controller';
 import { authenticateAdmin } from '../middleware/auth';
@@ -21,6 +22,7 @@ router.use(authenticateAdmin);
 
 // Source Management Endpoints
 router.get('/sources', getSources);
+router.post('/sources/reload', reloadSources);
 router.get('/sources/:id', getSourceById);
 router.post('/sources', addSource);
 router.put('/sources/:id', updateSource);
