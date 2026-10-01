@@ -78,10 +78,12 @@ model JobSource {
   source     Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   sourceName String
   messageId  Int?
-  postUrl    String
+  postUrl    String   @unique
   rawText    String
   postedAt   DateTime
   createdAt  DateTime @default(now())
+
+  @@unique([jobId, sourceId])
 }
 
 model User {

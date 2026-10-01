@@ -93,8 +93,10 @@ export const getJobs = async (req: Request, res: Response): Promise<any> => {
           experienceLevel: true,
           salary: true,
           deadline: true,
-          isDirectContact: true,
           createdAt: true,
+          _count: {
+            select: { sources: true }
+          },
           // Primary source for the card (channel name + link)
           sources: {
             select: { postUrl: true, sourceName: true, postedAt: true },
@@ -116,7 +118,12 @@ export const getJobs = async (req: Request, res: Response): Promise<any> => {
     }
 
     return res.json({
-      data: jobs.map((job) => ({ ...job, isSaved: savedJobIds.has(job.id) })),
+      data: jobs.map((job) => ({ 
+        ...job, 
+        sourceCount: job._count.sources,
+        _count: undefined, // remove the raw prisma _count object
+        isSaved: savedJobIds.has(job.id) 
+      })),
       pagination: {
         total,
         page: pageNum,
@@ -226,6 +233,7 @@ export const getJobById = async (req: Request, res: Response): Promise<any> => {
     const job = await prisma.job.findUnique({
       where: { id },
       include: {
+        _count: { select: { sources: true } },
         sources: {
           select: { postUrl: true, sourceName: true, postedAt: true, rawText: true },
         },
@@ -244,7 +252,15 @@ export const getJobById = async (req: Request, res: Response): Promise<any> => {
       isSaved = !!saved;
     }
 
-    return res.json({ ...job, isSaved });
+    // Format output to match exact requirements
+    const formattedJob = {
+      ...job,
+      sourceCount: job._count.sources,
+      _count: undefined, // hide raw prisma count
+      isSaved
+    };
+
+    return res.json(formattedJob);
   } catch (error) {
     console.error('Error fetching job:', error);
     return res.status(500).json({ error: 'Failed to fetch job' });
