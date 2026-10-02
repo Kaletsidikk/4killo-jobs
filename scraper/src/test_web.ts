@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { PoliteWebScraper, RawWebJob } from './webScraper';
+import { WebScraper, RawWebJob } from './webScraper';
 import { WEB_TARGETS } from './webTargets';
 
 async function runWebScraperTest() {
@@ -8,7 +8,7 @@ async function runWebScraperTest() {
   console.log('4KILLO Public Web Portal Ingestion Test');
   console.log('======================================================\n');
 
-  const scraper = new PoliteWebScraper();
+  const scraper = new WebScraper();
   const allScrapedWebJobs: RawWebJob[] = [];
 
   for (const target of WEB_TARGETS) {

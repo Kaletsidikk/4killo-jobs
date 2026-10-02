@@ -107,6 +107,14 @@ export class SmartDeduplicator {
       .trim();
   }
 
+  public normalizeCompanyName(name: string | null | undefined): string {
+    if (!name) return '';
+    let clean = this.normalizeText(name);
+    // Strip common legal entity suffixes (S.C, Share Company, PLC)
+    clean = clean.replace(/\b(s\s*c|share\s+company|plc|p\s*l\s*c|private\s+limited\s+company)\b/gi, '').trim();
+    return clean;
+  }
+
   public normalizeUrl(url: string | null | undefined): string | null {
     if (!url) return null;
     try {
@@ -182,10 +190,17 @@ export class SmartDeduplicator {
   public evaluateSimilarity(incoming: IngestedInput, existing: CanonicalJob): SimilaritySignals {
     const inc = incoming.job;
 
-    // 1. Direct deterministic signals (Application channels)
+    // 1. Direct deterministic signals (Application channels & provenance URLs)
     const incUrl = this.normalizeUrl(inc.applyUrl);
     const existUrl = this.normalizeUrl(existing.applyUrl);
-    const exactUrlMatch = Boolean(incUrl && existUrl && incUrl === existUrl);
+    const existSourceUrls = existing.sources.map(s => this.normalizeUrl(s.postUrl)).filter(Boolean);
+    const incPostUrl = this.normalizeUrl(incoming.postUrl);
+
+    const exactUrlMatch = Boolean(
+      (incUrl && existUrl && incUrl === existUrl) ||
+      (incUrl && existSourceUrls.includes(incUrl)) ||
+      (incPostUrl && existUrl && incPostUrl === existUrl)
+    );
 
     const incEmail = this.normalizeEmail(inc.applyEmail);
     const existEmail = this.normalizeEmail(existing.applyEmail);
@@ -199,9 +214,27 @@ export class SmartDeduplicator {
 
     // 2. Textual similarity signals
     const titleScore = this.calculateStringSimilarity(inc.title, existing.title);
-    const companyScore = this.calculateStringSimilarity(inc.company, existing.company);
+    const companyScore = this.calculateStringSimilarity(
+      this.normalizeCompanyName(inc.company),
+      this.normalizeCompanyName(existing.company)
+    );
     const locationScore = this.calculateStringSimilarity(inc.location, existing.location);
-    const descriptionScore = this.calculateStringSimilarity(inc.description, existing.description);
+    
+    // Description similarity with summary snippet containment support
+    let descriptionScore = this.calculateStringSimilarity(inc.description, existing.description);
+    const normDesc1 = this.normalizeText(inc.description);
+    const normDesc2 = this.normalizeText(existing.description);
+    if (normDesc1.length > 20 && normDesc2.length > 20) {
+      const shorter = normDesc1.length < normDesc2.length ? normDesc1 : normDesc2;
+      const longer = normDesc1.length < normDesc2.length ? normDesc2 : normDesc1;
+      const keywords = shorter.split(' ').filter(w => w.length >= 4);
+      if (keywords.length > 0) {
+        const matchCount = keywords.filter(w => longer.includes(w)).length;
+        if ((matchCount / keywords.length) >= 0.45) {
+          descriptionScore = Math.max(descriptionScore, 0.85);
+        }
+      }
+    }
 
     // 3. Deadline signal
     const deadlineMatches = Boolean(
