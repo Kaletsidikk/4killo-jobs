@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { ExperienceLevel } from '@prisma/client';
+import { resolveApplyLink } from '../utils/applyLink';
 
 /**
  * Internal helper: retry a Prisma call up to `retries` times with a short
@@ -93,6 +94,8 @@ export const getJobs = async (req: Request, res: Response): Promise<any> => {
           experienceLevel: true,
           salary: true,
           deadline: true,
+          applyUrl: true,
+          applyEmail: true,
           createdAt: true,
           _count: {
             select: { sources: true }
@@ -118,12 +121,23 @@ export const getJobs = async (req: Request, res: Response): Promise<any> => {
     }
 
     return res.json({
-      data: jobs.map((job) => ({ 
-        ...job, 
-        sourceCount: job._count.sources,
-        _count: undefined, // remove the raw prisma _count object
-        isSaved: savedJobIds.has(job.id) 
-      })),
+      data: jobs.map((job) => {
+        // ── Hop Bypass: resolve highest-priority apply link ──────────────
+        const primaryPostUrl = job.sources[0]?.postUrl ?? null;
+        const { applyLink, applyLinkType } = resolveApplyLink(
+          job.applyUrl,
+          job.applyEmail,
+          primaryPostUrl,
+        );
+        return {
+          ...job,
+          sourceCount: job._count.sources,
+          _count: undefined, // remove the raw prisma _count object
+          isSaved: savedJobIds.has(job.id),
+          applyLink,
+          applyLinkType,
+        };
+      }),
       pagination: {
         total,
         page: pageNum,
@@ -210,7 +224,16 @@ export const getSavedJobs = async (req: AuthRequest, res: Response): Promise<any
 
     const data = savedRecords
       .filter((r) => r.job && r.job.isActive)
-      .map((r) => ({ ...r.job, isSaved: true, savedAt: r.createdAt }));
+      .map((r) => {
+        // ── Hop Bypass: resolve highest-priority apply link ──────────────
+        const primaryPostUrl = r.job.sources[0]?.postUrl ?? null;
+        const { applyLink, applyLinkType } = resolveApplyLink(
+          r.job.applyUrl,
+          r.job.applyEmail,
+          primaryPostUrl,
+        );
+        return { ...r.job, isSaved: true, savedAt: r.createdAt, applyLink, applyLinkType };
+      });
 
     return res.json({ data, total: data.length });
   } catch (error) {
@@ -252,12 +275,23 @@ export const getJobById = async (req: Request, res: Response): Promise<any> => {
       isSaved = !!saved;
     }
 
+    // ── Hop Bypass: resolve highest-priority apply link ────────────────
+    // Use the first source's postUrl as the final fallback.
+    const primaryPostUrl = job.sources[0]?.postUrl ?? null;
+    const { applyLink, applyLinkType } = resolveApplyLink(
+      job.applyUrl,
+      job.applyEmail,
+      primaryPostUrl,
+    );
+
     // Format output to match exact requirements
     const formattedJob = {
       ...job,
       sourceCount: job._count.sources,
       _count: undefined, // hide raw prisma count
-      isSaved
+      isSaved,
+      applyLink,
+      applyLinkType,
     };
 
     return res.json(formattedJob);
