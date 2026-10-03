@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { ExperienceLevel } from '@prisma/client';
 import { resolveApplyLink } from '../utils/applyLink';
+import { scoreJob, compareByScore, getMatchLabel } from '../utils/jobScorer';
 
 /**
  * Internal helper: retry a Prisma call up to `retries` times with a short
@@ -301,7 +302,154 @@ export const getJobById = async (req: Request, res: Response): Promise<any> => {
   }
 };
 
-// ─── POST /api/jobs/:id/save ──────────────────────────────────────────────────
+// ─── GET /api/jobs/for-you ───────────────────────────────────────────────────
+/**
+ * Authenticated. Returns active jobs ranked by relevance to the user's
+ * saved Preference record using a weighted matching algorithm.
+ *
+ * Scoring (max 100 pts):
+ *   Category match      → +40  (exact, case-insensitive)
+ *   Location match      → +30  (substring, case-insensitive)
+ *   Experience level    → +20  (exact enum match)
+ *   Freshness (≤7 days) → +10
+ *
+ * Graceful degradation: if the user has no preferences set, all active
+ * jobs are returned sorted by freshness only (score = 0 for all).
+ *
+ * Query params:
+ *   page  — default 1
+ *   limit — default 10, max 50
+ *
+ * Response per job includes:
+ *   score        — 0–100 relevance score
+ *   matchReasons — { category, location, experience, fresh } booleans
+ *   applyLink    — resolved via Hop Bypass
+ *   applyLinkType
+ */
+export const getForYouJobs = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { page = '1', limit = '10' } = req.query as Record<string, string>;
+    const pageNum  = Math.max(1, parseInt(page, 10)  || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+
+    // ── 1. Load user preferences (null-safe: works even with no record) ────────
+    const prefs = await withDbRetry(() =>
+      prisma.preference.findUnique({ where: { userId } }),
+    );
+
+    const scorerPrefs = {
+      categories:      prefs?.categories      ?? [],
+      locations:       prefs?.locations       ?? [],
+      experienceLevel: prefs?.experienceLevel ?? 'NOT_SPECIFIED',
+    };
+
+    const hasPrefs =
+      scorerPrefs.categories.length > 0 ||
+      scorerPrefs.locations.length > 0;
+
+    // ── 2. Fetch all active jobs (with source postUrl for Hop Bypass) ──────────
+    // We fetch everything in memory so we can sort by computed score.
+
+    const allJobs = await withDbRetry(() =>
+      prisma.job.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id:              true,
+          title:           true,
+          company:         true,
+          location:        true,
+          category:        true,
+          employmentType:  true,
+          experienceLevel: true,
+          salary:          true,
+          deadline:        true,
+          applyUrl:        true,
+          applyEmail:      true,
+          createdAt:       true,
+          _count: { select: { sources: true } },
+          sources: {
+            select: { postUrl: true, sourceName: true, postedAt: true },
+            take: 1,
+          },
+        },
+      }),
+    );
+
+    // ── 3. Score every job against the user's preferences ─────────────────────
+    const scored = allJobs.map((job) => {
+      const { score, matchReasons } = scoreJob(
+        {
+          category:        job.category,
+          location:        job.location,
+          experienceLevel: job.experienceLevel,
+          createdAt:       job.createdAt,
+        },
+        scorerPrefs,
+      );
+
+      // Hop Bypass: resolve the best apply link
+      const primaryPostUrl = job.sources[0]?.postUrl ?? null;
+      const { applyLink, applyLinkType } = resolveApplyLink(
+        job.applyUrl,
+        job.applyEmail,
+        primaryPostUrl,
+      );
+
+      return {
+        ...job,
+        sourceCount:  job._count.sources,
+        _count:       undefined,
+        score,
+        matchLabel:   getMatchLabel(score),
+        matchReasons,
+        applyLink,
+        applyLinkType,
+      };
+    });
+
+    // ── 4. Sort: highest score first, then newest as tiebreaker ───────────────
+    scored.sort((a, b) => compareByScore(
+      { score: a.score, createdAt: a.createdAt },
+      { score: b.score, createdAt: b.createdAt },
+    ));
+
+    // ── 5. Paginate ───────────────────────────────────────────────────────────
+    const total     = scored.length;
+    const paginated = scored.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+
+    // ── 6. Attach isSaved flag ────────────────────────────────────────────────
+    const savedJobIds = new Set<string>();
+    if (paginated.length > 0) {
+      const saved = await prisma.savedJob.findMany({
+        where: { userId, jobId: { in: paginated.map((j) => j.id) } },
+        select: { jobId: true },
+      });
+      saved.forEach((s) => savedJobIds.add(s.jobId));
+    }
+
+    return res.json({
+      data: paginated.map((j) => ({ ...j, isSaved: savedJobIds.has(j.id) })),
+      pagination: {
+        total,
+        page:       pageNum,
+        limit:      limitNum,
+        totalPages: Math.ceil(total / limitNum) || 1,
+      },
+      meta: {
+        hasPreferences: hasPrefs,
+        scoringWeights: { category: 40, location: 30, experience: 20, fresh: 10 },
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching for-you jobs:', error);
+    return res.status(500).json({ error: 'Failed to fetch personalised jobs' });
+  }
+};
+
 /**
  * Authenticated. Bookmarks a job for the current user.
  * Idempotent — calling it twice has no effect (upsert).

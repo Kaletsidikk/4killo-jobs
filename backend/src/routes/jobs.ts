@@ -6,6 +6,7 @@ import {
   getCategories,
   getLocations,
   getSavedJobs,
+  getForYouJobs,
   saveJob,
   unsaveJob,
 } from '../controllers/jobs.controller';
@@ -20,6 +21,9 @@ router.get('/locations', getLocations);
 
 // GET /api/jobs/saved      — Get current user's saved jobs (requires auth)
 router.get('/saved', authenticateToken, getSavedJobs);
+
+// GET /api/jobs/for-you    — Personalised ranked feed (requires auth)
+router.get('/for-you', authenticateToken, getForYouJobs);
 
 // GET /api/jobs            — List jobs with filters & pagination (public, optional auth for isSaved)
 router.get('/', optionalAuth, getJobs);
