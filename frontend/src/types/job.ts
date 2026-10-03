@@ -14,6 +14,7 @@ export interface Job {
   experienceLevel: string;
   salary: string | null;
   deadline: string | null;
+  description: string;
   isDirectContact: boolean;
   createdAt: string;
   sources: JobSource[];
