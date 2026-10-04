@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTelegram } from "./hooks/useTelegram";
-
+import { ai } from "./services/voxide";
 import Onboarding from "./components/onboarding/Onboarding";
 
 import Home from "./pages/Home";
@@ -13,6 +13,11 @@ import type { Job } from "./types/job";
 import JobDetails from "./pages/JobDetails";
 
 function App() {
+  useEffect(() => {
+  ai.init().catch((error) => {
+    console.error("Voxide initialization failed:", error);
+  });
+}, []);
   useTelegram();
 
   const [activeTab, setActiveTab] = useState("Home");

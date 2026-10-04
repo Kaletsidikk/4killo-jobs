@@ -14,11 +14,22 @@ export interface Job {
   experienceLevel: string;
   salary: string | null;
   deadline: string | null;
-  description: string;
-  isDirectContact: boolean;
+  //description: string;
+  //isDirectContact: boolean;
   createdAt: string;
   sources: JobSource[];
+  sourceCount: number;
   isSaved: boolean;
+}
+
+export interface JobDetails extends Job {
+  description: string;
+  requirements: string | null;
+  education: string | null;
+  applyUrl: string | null;
+  applyEmail: string | null;
+  applyPhone: string | null;
+  isDirectContact: boolean;
 }
 
 export interface JobsResponse {

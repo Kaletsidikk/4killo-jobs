@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import {
   ArrowLeft,
   Bookmark,
@@ -8,7 +10,8 @@ import {
   Clock3,
 } from "lucide-react";
 
-import type { Job } from "../types/job";
+import { getJobById } from "../services/jobs";
+import type { Job, JobDetails as JobDetailsType } from "../types/job";
 
 interface JobDetailsProps {
   job: Job;
@@ -19,7 +22,50 @@ function JobDetails({
   job,
   onBack,
 }: JobDetailsProps) {
-  const sourceUrl = job.sources[0]?.postUrl;
+  const [jobDetails, setJobDetails] = useState<JobDetailsType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadJobDetails = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await getJobById(job.id);
+
+        setJobDetails(data);
+      } catch (err) {
+        console.error("Failed to load job details:", err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load job details"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadJobDetails();
+  }, [job.id]);
+
+const details = jobDetails ?? job;
+const sourceUrl = details.sources[0]?.postUrl;
+
+const applicationUrl = jobDetails?.applyUrl;
+const applicationEmail = jobDetails?.applyEmail;
+const applicationPhone = jobDetails?.applyPhone;
+
+const getApplyLabel = () => {
+  if (applicationUrl) return "Apply Now";
+  if (applicationEmail) return "Apply via Email";
+  if (applicationPhone) return "Contact";
+  if (sourceUrl) return "View Original Posting";
+
+  return "View Job Source";
+};
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28 text-slate-900">
@@ -66,6 +112,21 @@ function JobDetails({
 
         </div>
       </header>
+      {loading && (
+  <div className="px-5 pt-4">
+    <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">
+      Loading full job details...
+    </div>
+  </div>
+)}
+
+{error && (
+  <div className="px-5 pt-4">
+    <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
+      {error}
+    </div>
+  </div>
+)}
 
       {/* Job header */}
       <section className="bg-white px-5 pb-6 pt-6">
@@ -212,10 +273,33 @@ function JobDetails({
         </h2>
 
         <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
-          Job details are available from the original job posting.
+          {jobDetails?.description || "No description provided."}
         </p>
 
       </section>
+      {jobDetails?.requirements && (
+  <section className="px-5 pt-6">
+    <h2 className="text-base font-bold">
+      Requirements
+    </h2>
+
+    <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
+      {jobDetails.requirements}
+    </p>
+  </section>
+)}
+
+{jobDetails?.education && (
+  <section className="px-5 pt-6">
+    <h2 className="text-base font-bold">
+      Education
+    </h2>
+
+    <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
+      {jobDetails.education}
+    </p>
+  </section>
+)}
 
       {/* Source */}
       {sourceUrl && (
@@ -240,17 +324,33 @@ function JobDetails({
       <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4">
 
         <button
-          type="button"
-          onClick={() => {
-            if (sourceUrl) {
-              window.open(sourceUrl, "_blank");
-            }
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-        >
-          Apply via Form
-          <ExternalLink size={17} />
-        </button>
+  type="button"
+  onClick={() => {
+    if (applicationUrl) {
+      window.open(applicationUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    if (applicationEmail) {
+      window.location.href = `mailto:${applicationEmail}`;
+      return;
+    }
+
+    if (applicationPhone) {
+      window.location.href = `tel:${applicationPhone}`;
+      return;
+    }
+
+    if (sourceUrl) {
+      window.open(sourceUrl, "_blank", "noopener,noreferrer");
+    }
+  }}
+  disabled={!applicationUrl && !applicationEmail && !applicationPhone && !sourceUrl}
+  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {getApplyLabel()}
+  <ExternalLink size={17} />
+</button>
 
       </div>
 

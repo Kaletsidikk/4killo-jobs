@@ -1,5 +1,5 @@
 import { apiRequest } from "./api";
-import type { JobsResponse, Job } from "../types/job";
+import type { JobsResponse, JobDetails } from "../types/job";
 
 export async function getJobs(
   
@@ -45,6 +45,34 @@ export async function getJobs(
 
 export async function getJobById(
   id: string
-): Promise<Job> {
+): Promise<JobDetails> {
   return apiRequest(`/jobs/${id}`);
+}
+
+export interface JobCategory {
+  category: string;
+  count: number;
+}
+
+export async function getJobCategories(): Promise<{
+  data: JobCategory[];
+}> {
+  return apiRequest("/jobs/categories");
+}
+
+//save jobs
+export async function saveJob(jobId: string) {
+  return apiRequest(`/jobs/${jobId}/save`, {
+    method: "POST",
+  });
+}
+
+export async function unsaveJob(jobId: string) {
+  return apiRequest(`/jobs/${jobId}/save`, {
+    method: "DELETE",
+  });
+}
+
+export async function getSavedJobs(): Promise<JobsResponse> {
+  return apiRequest("/jobs/saved");
 }
