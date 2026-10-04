@@ -43,7 +43,7 @@ export class GeminiJobParser {
   private keyPool: KeyEntry[] = [];
   private currentKeyIndex = 0;
   private postCache = new Map<string, StructuredJob | null>();
-  private readonly models = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3.5-flash'];
+  private readonly models = ['gemini-3.8-flash'];
 
   constructor() {
     this.initKeyPool();
