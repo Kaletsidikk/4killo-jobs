@@ -1,44 +1,104 @@
-# 4KILLO Academic Research Grounding (Rule 01 — ScholarXIV)
+# 4KILLO Research Grounding (Rule 01 — ScholarXIV)
 
-## Collection Title
-**Labor Market Information Friction, Search Costs, and Youth Unemployment in Urban Ethiopia**
-*Hosted on [ScholarXIV](https://scholarxiv.com)*
+## Purpose of This Document
 
----
+This document records how 4KILLO uses academic evidence to ground its product decisions.
+ScholarXIV is used as the research discovery layer for this project — helping the team
+identify peer-reviewed work on labor-market search, information friction, and employment
+matching in Ethiopia and similar urban settings.
 
-## 1. Executive Research Abstract
-Urban youth unemployment in Ethiopia remains among the most critical socio-economic challenges, with youth unemployment rates in Addis Ababa historically exceeding 20%. While structural economic factors play a role, empirical labor economics research demonstrates that a substantial proportion of this unemployment is driven by **information friction** and **high search costs**:
-
-1. **Spatial & Search Inefficiencies:** Job vacancies are dispersed across dozens of informal channels and bulletin boards, forcing job seekers to spend between 5 and 6 hours per week manually navigating redundant listings.
-2. **Intermediary Costs & Opaque Hops:** Repost bots and unofficial referral channels strip direct employer contacts, increasing transaction costs and decreasing actual application submission rates.
-3. **Language & Interface Barriers:** The requirement for English text-based searching creates friction for vocational and entry-level job seekers.
-
-4KILLO directly implements the policy and technical recommendations derived from the cited literature: **centralized meta-aggregation, duplicate elimination, hop bypass transparency, and native language voice accessibility (Amharic & English)**.
+All product claims below are clearly separated from research findings. No paper is cited
+as proving something it did not directly measure.
 
 ---
 
-## 2. Primary Academic Citations & Relevance
+## Research Layer — Career Insights & Research Drawer
 
-### Citation 1: Labor Market Search Costs and Spatial Inefficiencies in Ethiopia
-* **Authors:** Franklin, S. (Oxford University / Center for the Study of African Economies)
-* **Title:** *Location, Search Costs, and Youth Unemployment: A Randomized Trial of Transport Subsidies in Urban Ethiopia*
-* **Core Finding:** Job search in Addis Ababa is hampered by extreme search costs. Reducing the cost and friction of discovering vacancies significantly increases employment probability and matching efficiency for urban youth.
-* **4KILLO Application:** Eliminates physical and digital search barriers by streaming public channels into a single, zero-friction Telegram Mini App.
+The Mini App embeds a "Career Insights & Research" section in the Settings tab. Each
+card follows a consistent structure:
 
-### Citation 2: Information Friction and Intermediary Distortion in Developing Labor Markets
-* **Authors:** Abebe, G., Caria, S., Fafchamps, M., Falco, P., Franklin, S., & Quinn, S.
-* **Title:** *Anonymity, Information Asymmetry, and Intermediation in Urban Labor Markets*
-* **Core Finding:** Intermediaries and referral loops introduce significant friction and drop-off in job applications. Direct transparency between the applicant and the ultimate hiring employer yields higher conversion rates and fairer employment outcomes.
-* **4KILLO Application:** The **Hop Bypass Engine** strips referral bot redirections and reveals verified direct employer email, URL, or phone contacts.
+  Research Finding → What it tells us → What 4KILLO builds or tests in response
 
-### Citation 3: Digital Job Platforms and Transparency in Sub-Saharan Africa
-* **Authors:** World Bank Africa Region Labor Policy Working Paper Series
-* **Title:** *Addressing Labor Market Frictions Through Digital Matching Platforms in East Africa*
-* **Core Finding:** Fragmentation across uncurated social media channels creates high duplicate rates and fatigue. Canonical deduplication and personalized recommendation feeds significantly improve candidate application quality.
-* **4KILLO Application:** The **Deduplication Engine** collapses identical reposts into a single canonical record with complete channel provenance.
+This structure ensures we present academic evidence honestly, without overstating it.
 
 ---
 
-## 3. Product Integration in 4KILLO Mini App
-* **UI Location:** Embedded directly inside the **"Career Insights & Research"** drawer in the Mini App's Settings tab and Home header.
-* **Architecture:** Static JSON payload rendered offline within the Mini App UI, maintaining 100% availability without dependency on external server uptime.
+## Insight 1: Reducing Job-Search Costs Improves Employment Outcomes
+
+### Verified Source
+**Franklin, S. (2018)**
+*Location, Search Costs and Youth Unemployment: Experimental Evidence from Transport Subsidies*
+Centre for the Study of African Economies (CSAE) / University of Oxford
+Available on Simon Franklin's research page and indexed on ScholarXIV.
+
+### What the Paper Actually Found
+A randomized experiment with unemployed youth in Addis Ababa showed that subsidizing
+transport costs — reducing the physical cost of searching for work — increased job-search
+intensity and improved the likelihood of finding stable employment.
+
+### What It Does NOT Claim
+The paper studied physical transport costs, not digital platform design. It does not
+directly measure the effect of aggregating online job listings.
+
+### Relevance to 4KILLO
+4KILLO addresses a different but analogous type of search cost: the time and cognitive
+effort required to discover, monitor, and filter fragmented job opportunities scattered
+across dozens of public Telegram channels. The paper gives us strong academic grounding
+for the general principle that *lowering search costs improves job-seeker outcomes*. We
+are building a product that tests whether reducing digital search costs produces similar
+benefits.
+
+### Product Response
+- Aggregate public job posts from multiple Telegram channels into one feed.
+- Eliminate duplicate listings so users are not wasting time reviewing the same vacancy.
+- Surface the direct application contact immediately, removing extra navigation steps.
+
+---
+
+## Insight 2: Urban Job-Search in Ethiopia Is Constrained by Distance and Exclusion
+
+### Verified Source
+**Abebe, G., Caria, A.S., Fafchamps, M., Falco, P., Franklin, S., & Quinn, S. (2021)**
+*Anonymity or Distance? Job Search and Labour Market Exclusion in a Growing African City*
+Review of Economic Studies, Volume 88, Issue 3.
+Available via Simon Franklin's research page.
+
+### What the Paper Actually Found
+A large-scale experiment in Addis Ababa found that labour market exclusion among young
+job seekers is partly explained by limited reach — they could not easily discover
+opportunities outside their immediate social and geographic network. Providing broader
+access to employer connections improved matching.
+
+### What It Does NOT Claim
+The paper does not study Telegram channels, duplicate job posts, or bot redirects.
+
+### Relevance to 4KILLO
+Many Ethiopian job seekers only know and monitor the 2–3 Telegram channels their
+contacts shared with them. They are unaware of the full landscape of channels posting
+relevant opportunities. This is an information reach problem: the same phenomenon the
+paper documented in physical networks now exists in digital information networks.
+
+### Product Response
+- Index a large number of public job channels, including niche and regional ones.
+- Allow administrators to dynamically add new channels so the indexed set grows over time.
+- Show users jobs from sources they would not have found independently.
+
+---
+
+## ScholarXIV Integration Plan
+
+1. **Collection:** The team publishes a public collection on [scholarxiv.com](https://scholarxiv.com)
+   titled *Job Search, Information Friction, and Labor Market Exclusion in Urban Ethiopia*
+   containing the two verified sources above plus any additional papers discovered during
+   the hackathon period.
+
+2. **Mini App Drawer:** The Career Insights & Research drawer in the Settings tab links
+   directly to this public collection and renders each insight card using the structure
+   above: Finding → Relevance → Product Response.
+
+3. **README:** The public GitHub repository links to both the ScholarXIV collection and
+   this document.
+
+4. **Architecture Safety:** All drawer content is embedded statically in the frontend.
+   The core scraping, matching, and deduplication services have zero runtime dependency
+   on ScholarXIV server availability.

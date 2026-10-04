@@ -52,7 +52,7 @@ class UnifiedIngestionWorker {
     console.log('======================================================');
 
     // 1. Initialize Gemini Parser
-    if (process.env.GEMINI_API_KEY) {
+    if (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY) {
       try {
         this.parser = new GeminiJobParser();
         console.log('[Worker] Gemini Flash Parser initialized.');
@@ -60,7 +60,7 @@ class UnifiedIngestionWorker {
         console.warn(`[Worker] Gemini init warning: ${err.message}`);
       }
     } else {
-      console.warn('[Worker] Warning: GEMINI_API_KEY is not set. Telegram AI parsing will be skipped.');
+      console.warn('[Worker] Warning: GEMINI_API_KEYS / GEMINI_API_KEY is not set. Telegram AI parsing will be skipped.');
     }
 
     // 2. Initialize Database Persistence (PostgreSQL)
