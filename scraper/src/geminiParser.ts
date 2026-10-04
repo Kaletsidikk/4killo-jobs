@@ -234,7 +234,7 @@ ${rawText}
           if (status === 429 || status === 503 || msg.includes('quota') || msg.includes('Too Many Requests')) {
             // Put current key in 60s cooldown and immediately switch to next key
             keyEntry.cooldownUntil = Date.now() + 60000;
-            console.warn(`[GeminiPool] Key (ending in ...${keyEntry.key.slice(-4)}) rate limited on ${modelName}. Switching immediately to next key.`);
+            console.warn(`[GeminiPool] Key (...${keyEntry.key.slice(-4)}) error [status ${status}]: ${msg}. Switching key.`);
             break; // Break inner model loop to try next key in outer loop
           } else {
             console.error(`[GeminiPool] Parsing error on ${modelName}:`, msg);
