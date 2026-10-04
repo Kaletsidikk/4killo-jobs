@@ -1,0 +1,122 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Language {
+  EN
+  AM
+}
+
+enum ExperienceLevel {
+  ENTRY
+  JUNIOR
+  MID
+  SENIOR
+  NOT_SPECIFIED
+}
+
+enum SourceType {
+  TELEGRAM_CHANNEL
+  TELEGRAM_GROUP
+  WEBSITE
+}
+
+enum SourceStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
+model Source {
+  id               String       @id @default(uuid())
+  name             String
+  identifier       String       @unique
+  type             SourceType   @default(TELEGRAM_CHANNEL)
+  status           SourceStatus @default(ACTIVE)
+  totalJobsScraped Int          @default(0)
+  lastSyncAt       DateTime?
+  errorMessage     String?
+  jobSources       JobSource[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Job {
+  id               String          @id @default(uuid())
+  title            String
+  company          String
+  location         String
+  category         String
+  employmentType   String?
+  experienceLevel  ExperienceLevel @default(NOT_SPECIFIED)
+  education        String?
+  salary           String?
+  deadline         DateTime?
+  description      String
+  requirements     String?
+  applyUrl         String?
+  applyEmail       String?
+  applyPhone       String?
+  isDirectContact  Boolean         @default(false)
+  isActive         Boolean         @default(true)
+  sources          JobSource[]
+  savedBy          SavedJob[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model JobSource {
+  id         String   @id @default(uuid())
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  sourceId   String
+  source     Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceName String
+  messageId  Int?
+  postUrl    String   @unique
+  rawText    String
+  postedAt   DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([jobId, sourceId])
+}
+
+model User {
+  id         String      @id @default(uuid())
+  telegramId BigInt      @unique
+  username   String?
+  firstName  String?
+  language   Language    @default(EN)
+  preference Preference?
+  savedJobs  SavedJob[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Preference {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories      String[]
+  locations       String[]
+  experienceLevel ExperienceLevel @default(ENTRY)
+  instantAlerts   Boolean         @default(true)
+  digestAlerts    Boolean         @default(true)
+  updatedAt       DateTime        @updatedAt
+}
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  userId    String
+  jobId     String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, jobId])
+}

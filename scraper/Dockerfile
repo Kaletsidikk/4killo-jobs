@@ -5,6 +5,9 @@ WORKDIR /app
 COPY package*.json tsconfig.json ./
 RUN npm ci
 
+COPY prisma ./prisma
+RUN npx prisma generate
+
 COPY src ./src
 RUN npm run build
 
@@ -15,6 +18,9 @@ WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci --only=production
+
+COPY prisma ./prisma
+RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
 

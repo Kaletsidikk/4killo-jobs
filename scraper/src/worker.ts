@@ -9,6 +9,7 @@ import { WEB_TARGETS } from './webTargets';
 import { WebScraper } from './webScraper';
 import { GeminiJobParser } from './geminiParser';
 import { SmartDeduplicator, IngestedInput, CanonicalJob } from './deduplicator';
+import { DatabasePersistence } from './dbPersistence';
 
 dotenv.config();
 
@@ -20,13 +21,15 @@ dotenv.config();
  * 2. Web Portal Cron: Scheduled scraping of Ethiopian job portals.
  * 3. AI Structuring: Gemini Flash NER for unstructured posts.
  * 4. Deduplication Engine: Real-time multi-signal merging (Telegram + Web).
- * 5. Railway Healthcheck: Lightweight HTTP listener for uptime probes.
+ * 5. PostgreSQL Persistence: Writes canonical jobs and multi-source provenance directly to DB.
+ * 6. Railway Healthcheck: Lightweight HTTP listener for uptime probes.
  */
 class UnifiedIngestionWorker {
   private client: TelegramClient | null = null;
   private webScraper: WebScraper;
   private parser: GeminiJobParser | null = null;
   private deduplicator: SmartDeduplicator;
+  private dbPersistence: DatabasePersistence | null = null;
   private isRunning = false;
   private lastWebSync: Date | null = null;
   private lastTelegramSync: Date | null = null;
@@ -60,10 +63,22 @@ class UnifiedIngestionWorker {
       console.warn('[Worker] Warning: GEMINI_API_KEY is not set. Telegram AI parsing will be skipped.');
     }
 
-    // 2. Start Health Check Server for Railway
+    // 2. Initialize Database Persistence (PostgreSQL)
+    if (process.env.DATABASE_URL) {
+      try {
+        this.dbPersistence = new DatabasePersistence();
+        console.log('[Worker] PostgreSQL persistence layer initialized.');
+      } catch (err: any) {
+        console.warn(`[Worker] PostgreSQL init warning: ${err.message}`);
+      }
+    } else {
+      console.warn('[Worker] Warning: DATABASE_URL not set. Running in offline JSON mode.');
+    }
+
+    // 3. Start Health Check Server for Railway
     this.startHealthCheckServer();
 
-    // 3. Connect Telegram MTProto Client
+    // 4. Connect Telegram MTProto Client
     await this.initTelegramClient();
 
     this.isRunning = true;
@@ -144,6 +159,12 @@ class UnifiedIngestionWorker {
           const ingested = this.webScraper.toIngestedInput(rawWebJobs[i], i);
           const result = this.deduplicator.ingest(ingested);
           this.totalJobsProcessed++;
+
+          // Persist directly to PostgreSQL as the single source of truth
+          if (this.dbPersistence) {
+            await this.dbPersistence.persistJob(result.canonicalJob, ingested, result.status);
+          }
+
           if (result.status === 'MERGED') {
             console.log(`[Worker:Web] Merged duplicate: "${ingested.job.title}" at "${ingested.job.company}"`);
           }
@@ -183,6 +204,11 @@ class UnifiedIngestionWorker {
 
               const result = this.deduplicator.ingest(input);
               this.totalJobsProcessed++;
+
+              // Persist directly to PostgreSQL as the single source of truth
+              if (this.dbPersistence) {
+                await this.dbPersistence.persistJob(result.canonicalJob, input, result.status);
+              }
 
               if (result.status === 'MERGED') {
                 console.log(`[Worker:Telegram] Merged duplicate: "${structured.title}" across sources`);
