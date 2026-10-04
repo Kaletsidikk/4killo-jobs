@@ -1,15 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as dotenv from 'dotenv';
+import * as crypto from 'crypto';
 
 dotenv.config();
-
-const apiKey = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
-
-// Free tier: 5 requests/minute → 13s gap keeps us safely under the limit
-const RATE_LIMIT_DELAY_MS = 13000;
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 65000; // Wait 65s on 429 (rate limit) and 503 (overload)
 
 export interface StructuredJob {
   isJobPost: boolean;
@@ -30,20 +23,89 @@ export interface StructuredJob {
   isDirectContact: boolean;
 }
 
+interface KeyEntry {
+  key: string;
+  client: GoogleGenerativeAI;
+  cooldownUntil: number;
+}
+
+/**
+ * High-Throughput Multi-Key Gemini Parser with Instant Failover
+ * 
+ * Features:
+ * 1. Multi-key pool via GEMINI_API_KEYS (comma-separated) or GEMINI_API_KEY.
+ * 2. Stable high-quota models: gemini-2.0-flash with fallback to gemini-1.5-flash (1,500 req/day per key).
+ * 3. Instant failover: If Key A hits 429, Key B takes over immediately without waiting.
+ * 4. Heuristic pre-filter: Discards non-job posts locally in 0ms to preserve quota.
+ * 5. In-memory hash cache: Prevents re-calling Gemini on duplicate Telegram broadcasts.
+ */
 export class GeminiJobParser {
-  private model: any;
+  private keyPool: KeyEntry[] = [];
+  private currentKeyIndex = 0;
+  private postCache = new Map<string, StructuredJob | null>();
+  private readonly models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
 
   constructor() {
-    this.model = genAI.getGenerativeModel({
-      model: 'gemini-3.8-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
-    });
+    this.initKeyPool();
+  }
+
+  private initKeyPool() {
+    const rawKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '';
+    const keys = rawKeys
+      .split(',')
+      .map((k) => k.trim())
+      .filter((k) => k.length > 10);
+
+    const uniqueKeys = Array.from(new Set(keys));
+
+    if (uniqueKeys.length === 0) {
+      console.warn('[GeminiPool] No valid GEMINI_API_KEY or GEMINI_API_KEYS found in environment.');
+    } else {
+      console.log(`[GeminiPool] Initialized pool with ${uniqueKeys.length} active API key(s).`);
+    }
+
+    this.keyPool = uniqueKeys.map((key) => ({
+      key,
+      client: new GoogleGenerativeAI(key),
+      cooldownUntil: 0,
+    }));
+  }
+
+  private getNextAvailableKey(): KeyEntry | null {
+    if (this.keyPool.length === 0) return null;
+
+    const now = Date.now();
+    for (let i = 0; i < this.keyPool.length; i++) {
+      const idx = (this.currentKeyIndex + i) % this.keyPool.length;
+      const candidate = this.keyPool[idx];
+      if (candidate.cooldownUntil <= now) {
+        this.currentKeyIndex = (idx + 1) % this.keyPool.length;
+        return candidate;
+      }
+    }
+
+    // All keys currently in cooldown — return the one that expires soonest
+    const sorted = [...this.keyPool].sort((a, b) => a.cooldownUntil - b.cooldownUntil);
+    return sorted[0];
   }
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Fast local heuristic: Discards non-job announcements in 0ms to conserve API quota
+   */
+  private looksLikeJobPost(text: string): boolean {
+    if (!text || text.trim().length < 40) return false;
+
+    // English job keywords
+    const enPattern = /\b(job|jobs|vacancy|vacancies|hiring|position|career|careers|salary|qualification|qualifications|experience|requirements|degree|diploma|apply|deadline|full-time|part-time|internship|officer|manager|assistant|engineer|specialist|auditor)\b/i;
+
+    // Amharic job keywords
+    const amPattern = /(ሥራ|የሥራ|ክፍት|ደመወዝ|ተፈላጊ|ችሎታ|ማመልከቻ|ልምድ|ተመራቂ|ምዝገባ|ባንክ|ድርጅት|የስራ)/;
+
+    return enPattern.test(text) || amPattern.test(text);
   }
 
   /**
@@ -71,10 +133,20 @@ export class GeminiJobParser {
   }
 
   /**
-   * Uses Gemini 3.8 Flash to parse messy Amharic or English Telegram vacancy posts.
-   * Includes rate-limit delay and exponential retry on 429/503.
+   * Parses messy Amharic or English Telegram vacancy posts using multi-key failover
    */
   async parsePost(rawText: string): Promise<StructuredJob | null> {
+    // 1. Fast heuristic pre-filter (saves quota)
+    if (!this.looksLikeJobPost(rawText)) {
+      return null;
+    }
+
+    // 2. Cache check (prevents re-parsing identical posts across channels)
+    const hash = crypto.createHash('md5').update(rawText.trim().toLowerCase()).digest('hex');
+    if (this.postCache.has(hash)) {
+      return this.postCache.get(hash) || null;
+    }
+
     const prompt = `You are an expert Ethiopian Labor Market Data Parser.
 Analyze the following Telegram post. It may be written in English, Amharic, or a mix.
 Determine if it is a legitimate job vacancy advertisement.
@@ -104,37 +176,70 @@ Telegram Post Content:
 ${rawText}
 """`;
 
-    // Rate-limit delay before every call to respect free-tier quota
-    await this.sleep(RATE_LIMIT_DELAY_MS);
+    // Try available keys and fallback models
+    const maxAttempts = Math.max(this.keyPool.length * 2, 4);
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const result = await this.model.generateContent(prompt);
-        const responseText = result.response.text();
-        const parsed = JSON.parse(responseText);
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const keyEntry = this.getNextAvailableKey();
+      if (!keyEntry) {
+        console.warn('[GeminiPool] No API keys configured.');
+        return null;
+      }
 
-        if (!parsed.isJobPost) {
-          return null;
-        }
+      // If the selected key is currently cooling down, wait for it
+      const waitTime = keyEntry.cooldownUntil - Date.now();
+      if (waitTime > 0) {
+        const sleepSec = Math.min(Math.ceil(waitTime / 1000), 20);
+        console.log(`[GeminiPool] All keys throttled. Waiting ${sleepSec}s for cooldown...`);
+        await this.sleep(sleepSec * 1000);
+      }
 
-        const contact = this.resolveHopBypass(rawText, parsed.applyUrl);
+      // Try models in order: gemini-2.0-flash first, then gemini-1.5-flash
+      for (const modelName of this.models) {
+        try {
+          const model = keyEntry.client.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              responseMimeType: 'application/json',
+            },
+          });
 
-        return {
-          ...parsed,
-          applyUrl: contact.applyUrl,
-          applyEmail: contact.applyEmail,
-          applyPhone: contact.applyPhone,
-          isDirectContact: contact.isDirectContact,
-        };
-      } catch (error: any) {
-        const status = error?.status;
+          // Polite pacing: 3 seconds
+          await this.sleep(3000);
 
-        if ((status === 429 || status === 503) && attempt < MAX_RETRIES) {
-          console.warn(`   Gemini rate limit / overload (${status}). Waiting ${RETRY_DELAY_MS / 1000}s before retry ${attempt}/${MAX_RETRIES - 1}...`);
-          await this.sleep(RETRY_DELAY_MS);
-        } else {
-          console.error('   Gemini Parsing Error:', error?.message || error);
-          return null;
+          const result = await model.generateContent(prompt);
+          const responseText = result.response.text();
+          const parsed = JSON.parse(responseText);
+
+          if (!parsed.isJobPost) {
+            this.postCache.set(hash, null);
+            return null;
+          }
+
+          const contact = this.resolveHopBypass(rawText, parsed.applyUrl);
+          const structured: StructuredJob = {
+            ...parsed,
+            applyUrl: contact.applyUrl,
+            applyEmail: contact.applyEmail,
+            applyPhone: contact.applyPhone,
+            isDirectContact: contact.isDirectContact,
+          };
+
+          this.postCache.set(hash, structured);
+          return structured;
+        } catch (error: any) {
+          const status = error?.status;
+          const msg = error?.message || '';
+
+          if (status === 429 || status === 503 || msg.includes('quota') || msg.includes('Too Many Requests')) {
+            // Put current key in 60s cooldown and immediately switch to next key
+            keyEntry.cooldownUntil = Date.now() + 60000;
+            console.warn(`[GeminiPool] Key (ending in ...${keyEntry.key.slice(-4)}) rate limited on ${modelName}. Switching immediately to next key.`);
+            break; // Break inner model loop to try next key in outer loop
+          } else {
+            console.error(`[GeminiPool] Parsing error on ${modelName}:`, msg);
+            // Non-rate limit error — try next model
+          }
         }
       }
     }
