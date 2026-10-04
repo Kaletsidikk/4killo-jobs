@@ -43,7 +43,12 @@ export class GeminiJobParser {
   private keyPool: KeyEntry[] = [];
   private currentKeyIndex = 0;
   private postCache = new Map<string, StructuredJob | null>();
-  private readonly models = ['gemini-3.8-flash'];
+  private readonly models = [
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+  ];
 
   constructor() {
     this.initKeyPool();
@@ -230,20 +235,99 @@ ${rawText}
         } catch (error: any) {
           const status = error?.status;
           const msg = error?.message || '';
-
-          if (status === 429 || status === 503 || msg.includes('quota') || msg.includes('Too Many Requests')) {
-            // Put current key in 60s cooldown and immediately switch to next key
-            keyEntry.cooldownUntil = Date.now() + 60000;
-            console.warn(`[GeminiPool] Key (...${keyEntry.key.slice(-4)}) error [status ${status}]: ${msg}. Switching key.`);
-            break; // Break inner model loop to try next key in outer loop
+          const isDailyQuota = msg.includes('quota exceeded') || msg.includes('QuotaFailure') || msg.includes('exceeded your current quota');
+          if (isDailyQuota) {
+            // Out of daily quota (e.g. 20 req/day limit reached). Cool down for 12 hours so it doesn't waste attempts.
+            keyEntry.cooldownUntil = Date.now() + 12 * 60 * 60 * 1000;
+            console.warn(`[GeminiPool] Key (...${keyEntry.key.slice(-4)}) daily quota reached. Marked offline for 12h.`);
+            break;
+          } else if (status === 429 || status === 503 || msg.includes('Too Many Requests')) {
+            // Temporary spike / rate limit — cool down for 15s
+            keyEntry.cooldownUntil = Date.now() + 15000;
+            console.warn(`[GeminiPool] Key (...${keyEntry.key.slice(-4)}) temporary overload [status ${status}]. Cooldown 15s.`);
+            break;
           } else {
             console.error(`[GeminiPool] Parsing error on ${modelName}:`, msg);
-            // Non-rate limit error — try next model
           }
         }
       }
     }
 
-    return null;
+    // 3. Fallback Heuristic Parser: Ensures 100% pipeline uptime even during AI outages/quotas
+    console.log('[GeminiPool] AI parser unavailable. Applying heuristic regex fallback parser...');
+    const fallback = this.fallbackRegexParse(rawText);
+    this.postCache.set(hash, fallback);
+    return fallback;
+  }
+
+  /**
+   * Resilient fallback parser: Extracts vacancy fields using regex patterns and hop-bypass
+   * when LLM API keys are exhausted or experiencing transient outages.
+   */
+  private fallbackRegexParse(rawText: string): StructuredJob {
+    const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
+    const title = lines[0]?.replace(/[#*•-]/g, '').trim() || 'Job Vacancy';
+    const contact = this.resolveHopBypass(rawText);
+
+    // Heuristic sector mapping
+    let category = 'Other';
+    if (/software|developer|programmer|frontend|backend|react|flutter|fullstack|node|python|ai|ml/i.test(rawText)) {
+      category = 'IT & Software';
+    } else if (/bank|banking|finance|accountant|auditor|cashier|teller/i.test(rawText)) {
+      category = 'Banking & Finance';
+    } else if (/health|nurse|doctor|medical|hospital|pharmacy/i.test(rawText)) {
+      category = 'Healthcare';
+    } else if (/engineer|civil|electrical|mechanical|construction/i.test(rawText)) {
+      category = 'Engineering';
+    } else if (/ngo|humanitarian|aid|specialist|officer|relief/i.test(rawText)) {
+      category = 'NGO';
+    } else if (/sales|marketing|business|manager|lead/i.test(rawText)) {
+      category = 'Marketing & Sales';
+    }
+
+    // Heuristic company name
+    let company = 'Telegram Employer';
+    const companyMatch = rawText.match(/(?:company|organization|employer|organization|at|for|ድርጅት|ተቋም)\s*[:፡\-]?\s*([A-Za-z0-9\s&,.]{3,40})/i);
+    if (companyMatch && companyMatch[1]?.trim()) {
+      company = companyMatch[1].trim();
+    }
+
+    // Heuristic location
+    let location = 'Addis Ababa, Ethiopia';
+    if (/remote|online|work from home/i.test(rawText)) {
+      location = 'Remote';
+    } else if (/hawassa|hawasa/i.test(rawText)) {
+      location = 'Hawassa, Ethiopia';
+    } else if (/adama|nazret/i.test(rawText)) {
+      location = 'Adama, Ethiopia';
+    } else if (/bahir dar|bahirdar/i.test(rawText)) {
+      location = 'Bahir Dar, Ethiopia';
+    }
+
+    // Heuristic deadline
+    let deadline: string | null = null;
+    const deadlineMatch = rawText.match(/(?:deadline|date|ማብቂያ)\s*[:፡\-]?\s*(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{4})/i);
+    if (deadlineMatch) {
+      deadline = deadlineMatch[1];
+    }
+
+    return {
+      isJobPost: true,
+      title: title.slice(0, 100),
+      company: company.slice(0, 80),
+      location,
+      category,
+      employmentType: /intern|internship/i.test(rawText) ? 'Internship' : /part[- ]time/i.test(rawText) ? 'Part-time' : 'Full-time',
+      experienceLevel: /entry|fresh|graduate|0 year|0 yr/i.test(rawText) ? 'ENTRY' : /senior|lead|head/i.test(rawText) ? 'SENIOR' : 'NOT_SPECIFIED',
+      education: 'See details in job post',
+      salary: 'Not Specified',
+      deadline,
+      description: rawText.slice(0, 1200),
+      requirements: 'See original post for full criteria and qualifications',
+      applyUrl: contact.applyUrl,
+      applyEmail: contact.applyEmail,
+      applyPhone: contact.applyPhone,
+      isDirectContact: contact.isDirectContact,
+    };
   }
 }
