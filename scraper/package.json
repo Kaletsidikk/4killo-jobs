@@ -6,6 +6,8 @@
   "scripts": {
     "login": "ts-node src/generateSession.ts",
     "scrape": "ts-node src/scraper.ts",
+    "worker": "ts-node src/worker.ts",
+    "start": "node dist/worker.js",
     "build": "tsc"
   },
   "dependencies": {
