@@ -6,6 +6,7 @@ import preferenceRoutes from "./routes/preferences";
 import jobRoutes from "./routes/jobs";
 import adminRoutes from "./routes/admin";
 import sourcesRoutes from "./routes/sources";
+import voiceRoutes from "./routes/voice";
 
 dotenv.config();
 
@@ -20,6 +21,8 @@ app.use("/api/preferences", preferenceRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/sources", sourcesRoutes);
+app.use("/api/voice", voiceRoutes);
+
 
 app.get("/health", (_req, res) => {
   res.json({
