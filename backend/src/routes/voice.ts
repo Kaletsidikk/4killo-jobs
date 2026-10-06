@@ -4,6 +4,8 @@ import {
   VOXIDE_SYSTEM_PROMPT,
   parseEthiopianVoiceIntent,
 } from '@4killo/shared';
+import { optionalAuth } from '../middleware/auth';
+import { voiceSearch, voiceSearchGet } from '../controllers/voice.controller';
 
 const router = Router();
 
@@ -42,5 +44,14 @@ router.post('/parse-intent', (req: Request, res: Response) => {
     ...params,
   });
 });
+
+// ── POST /api/voice/search ────────────────────────────────────────────────────
+// Full voice-to-results pipeline: transcript → NLU → Prisma WHERE → DB → jobs.
+// Optional auth: includes isSaved flag when a valid JWT is present.
+router.post('/search', optionalAuth, voiceSearch);
+
+// ── GET /api/voice/search ─────────────────────────────────────────────────────
+// Voxide deep-link variant: ?q=<transcript>&page=1&limit=10
+router.get('/search', optionalAuth, voiceSearchGet);
 
 export default router;

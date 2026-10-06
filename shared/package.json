@@ -1,0 +1,10 @@
+{
+  "name": "@4killo/shared",
+  "version": "1.0.0",
+  "description": "Shared contracts and types for 4KILLO",
+  "main": "./dist/contracts/voxide.js",
+  "types": "./dist/contracts/voxide.d.ts",
+  "scripts": {
+    "build": "tsc"
+  }
+}

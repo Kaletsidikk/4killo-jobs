@@ -90,10 +90,22 @@ export const VOXIDE_CLEAR_CAPABILITY = {
 };
 
 export const VOXIDE_CAPABILITY_MANIFEST = {
-  version: "1.0.0",
+  version: "1.1.0",
   service: "4killo_job_search",
   supportedLanguages: ["am-ET", "en-US", "am-Latn"],
   capabilities: [VOXIDE_SEARCH_CAPABILITY, VOXIDE_CLEAR_CAPABILITY],
+  /**
+   * Voice search pipeline endpoints.
+   * POST body: { transcript: string, page?: number, limit?: number }
+   * GET  query: ?q=<transcript>&page=1&limit=10
+   * Both return: { transcript, intent, appliedParams, data[], pagination }
+   */
+  endpoints: {
+    manifest:    "GET  /api/voice/voxide-capability",
+    parseIntent: "POST /api/voice/parse-intent",
+    search:      "POST /api/voice/search",
+    searchGet:   "GET  /api/voice/search?q=<transcript>",
+  },
 };
 
 // ─── 3. BILINGUAL VOXIDE SYSTEM PROMPT ──────────────────────────────────────
