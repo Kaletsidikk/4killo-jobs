@@ -426,9 +426,15 @@ export const getForYouJobs = async (req: AuthRequest, res: Response): Promise<an
       { score: b.score, createdAt: b.createdAt },
     ));
 
+    // When the user specifies categories, ONLY include jobs that genuinely match their category (score >= 40)
+    // Never show random cashiers, midwives, tutors, drivers in their curated feed.
+    const relevantJobs = hasPrefs
+      ? scored.filter((j) => j.score >= 40)
+      : scored;
+
     // ── 5. Paginate ───────────────────────────────────────────────────────────
-    const total     = scored.length;
-    const paginated = scored.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+    const total     = relevantJobs.length;
+    const paginated = relevantJobs.slice((pageNum - 1) * limitNum, pageNum * limitNum);
 
     // ── 6. Attach isSaved flag ────────────────────────────────────────────────
     const savedJobIds = new Set<string>();

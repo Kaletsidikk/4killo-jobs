@@ -31,7 +31,7 @@ const FRESHNESS_DAYS = 7;
  */
 const CATEGORY_SYNONYMS: Record<string, string[]> = {
   "software development": [
-    "software", "developer", "engineer", "it & software", "tech & software",
+    "software", "developer", "software engineer", "it & software", "tech & software",
     "web", "frontend", "backend", "fullstack", "programming", "code", "dev"
   ],
   "it & software": [
