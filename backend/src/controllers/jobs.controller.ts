@@ -329,22 +329,30 @@ export const getJobById = async (req: Request, res: Response): Promise<any> => {
 export const getForYouJobs = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const userId = req.user?.userId;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { page = '1', limit = '10' } = req.query as Record<string, string>;
+    const { page = '1', limit = '10', categories: queryCats, locations: queryLocs, experienceLevel: queryExp } = req.query as Record<string, string>;
     const pageNum  = Math.max(1, parseInt(page, 10)  || 1);
     const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
 
-    // ── 1. Load user preferences (null-safe: works even with no record) ────────
-    const prefs = await withDbRetry(() =>
-      prisma.preference.findUnique({ where: { userId } }),
-    );
-
-    const scorerPrefs = {
-      categories:      prefs?.categories      ?? [],
-      locations:       prefs?.locations       ?? [],
-      experienceLevel: prefs?.experienceLevel ?? 'NOT_SPECIFIED',
+    // ── 1. Load user preferences (from DB if logged in, otherwise from query params) ──
+    let scorerPrefs = {
+      categories: queryCats ? queryCats.split(',').filter(Boolean) : [] as string[],
+      locations: queryLocs ? queryLocs.split(',').filter(Boolean) : [] as string[],
+      experienceLevel: queryExp || 'NOT_SPECIFIED',
     };
+
+    if (userId) {
+      const prefs = await withDbRetry(() =>
+        prisma.preference.findUnique({ where: { userId } }),
+      );
+      if (prefs) {
+        scorerPrefs = {
+          categories: prefs.categories.length > 0 ? prefs.categories : scorerPrefs.categories,
+          locations: prefs.locations.length > 0 ? prefs.locations : scorerPrefs.locations,
+          experienceLevel: prefs.experienceLevel !== 'NOT_SPECIFIED' ? prefs.experienceLevel : scorerPrefs.experienceLevel,
+        };
+      }
+    }
 
     const hasPrefs =
       scorerPrefs.categories.length > 0 ||

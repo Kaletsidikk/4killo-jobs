@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles, MapPin, BriefcaseBusiness, Clock3, Bookmark, CheckCircle, ArrowRight } from "lucide-react";
 import { getForYouJobs, getJobs, saveJob, unsaveJob } from "../services/jobs";
+import { getPreferences } from "../services/preferences";
 import type { Job } from "../types/job";
 
 interface ForYouProps {
@@ -12,6 +13,11 @@ function ForYou({ onJobSelect }: ForYouProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isPersonalized, setIsPersonalized] = useState(false);
+  const [activePreferences, setActivePreferences] = useState<{
+    categories?: string[];
+    locations?: string[];
+    experienceLevel?: string;
+  } | null>(null);
 
   useEffect(() => {
     loadRecommendedJobs();
@@ -22,16 +28,30 @@ function ForYou({ onJobSelect }: ForYouProps) {
       setLoading(true);
       setError("");
 
-      // Try personalized feed first (requires auth)
+      // 1. Retrieve user preferences (from backend or local cache)
+      const prefs = await getPreferences();
+      if (prefs) {
+        setActivePreferences({
+          categories: prefs.categories,
+          locations: prefs.locations,
+          experienceLevel: prefs.experienceLevel,
+        });
+      }
+
+      // 2. Fetch jobs ranked against these preferences
       try {
-        const response = await getForYouJobs(1, 15);
+        const response = await getForYouJobs(1, 20, {
+          categories: prefs?.categories,
+          locations: prefs?.locations,
+          experienceLevel: prefs?.experienceLevel,
+        });
         if (response.data && response.data.length > 0) {
           setJobs(response.data);
           setIsPersonalized(true);
           return;
         }
       } catch (authErr) {
-        console.warn("Personalized feed unavailable, falling back to top jobs:", authErr);
+        console.warn("Ranked feed fetch issue, falling back to top jobs:", authErr);
       }
 
       // Fallback: Show latest verified active jobs
@@ -80,6 +100,23 @@ function ForYou({ onJobSelect }: ForYouProps) {
             </p>
           </div>
         </div>
+
+        {/* Active preference badges */}
+        {activePreferences && activePreferences.categories && activePreferences.categories.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 overflow-x-auto pt-1">
+            <span className="text-[11px] font-semibold text-slate-400">Matched to:</span>
+            {activePreferences.categories.slice(0, 3).map((cat) => (
+              <span key={cat} className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                {cat}
+              </span>
+            ))}
+            {activePreferences.locations && activePreferences.locations.length > 0 && (
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                📍 {activePreferences.locations[0]}
+              </span>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Content */}

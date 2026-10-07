@@ -79,9 +79,22 @@ export async function getSavedJobs(): Promise<JobsResponse> {
 
 export async function getForYouJobs(
   page = 1,
-  limit = 10
+  limit = 10,
+  prefs?: { categories?: string[]; locations?: string[]; experienceLevel?: string }
 ): Promise<JobsResponse> {
-  return apiRequest(`/jobs/for-you?page=${page}&limit=${limit}`);
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+  if (prefs?.categories && prefs.categories.length > 0) {
+    params.set("categories", prefs.categories.join(","));
+  }
+  if (prefs?.locations && prefs.locations.length > 0) {
+    params.set("locations", prefs.locations.join(","));
+  }
+  if (prefs?.experienceLevel && prefs.experienceLevel !== "NOT_SPECIFIED") {
+    params.set("experienceLevel", prefs.experienceLevel);
+  }
+  return apiRequest(`/jobs/for-you?${params.toString()}`);
 }
 
 export async function parseVoiceIntent(transcript: string) {
