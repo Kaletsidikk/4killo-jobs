@@ -166,7 +166,8 @@ function Home({ onJobSelect }: HomeProps) {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-ET"; // Ethiopian English, falls back to en-US
+    // Use Amharic (am-ET) when the user's interface is set to Amharic, otherwise en-US
+    recognition.lang = lang === "AM" ? "am-ET" : "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;
@@ -184,8 +185,13 @@ function Home({ onJobSelect }: HomeProps) {
       try {
         // Parse intent via backend NLU pipeline (Amharic + English)
         const intent = await parseVoiceIntent(transcript);
-        setSearch(intent.keyword ?? transcript);
-        setSearchInput(intent.keyword ?? transcript);
+        
+        // Put the clean keyword or transcript into the search bar
+        const targetSearch = intent.keyword || transcript;
+        setSearch(targetSearch);
+        setSearchInput(targetSearch);
+
+        // When a specific category is returned, ensure it maps to one of the actual DB categories or keep broad
         setSelectedCategory(intent.category ?? "");
         setSelectedLocation(intent.location ?? "");
         setSelectedExperienceLevel(intent.experienceLevel ?? "");
@@ -193,10 +199,10 @@ function Home({ onJobSelect }: HomeProps) {
         setVoiceActive(true);
         setPage(1);
 
-        // Also send to Voxide for AI conversation response
+        // Send to Voxide AI voice client
         sendText(transcript);
       } catch {
-        // Fallback: just use raw transcript as keyword search
+        // Fallback: put raw transcript into search bar
         setSearch(transcript);
         setSearchInput(transcript);
         setVoiceActive(true);

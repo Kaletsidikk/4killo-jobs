@@ -4,6 +4,7 @@ import prisma from '../lib/prisma';
 import { ExperienceLevel } from '@prisma/client';
 import { resolveApplyLink } from '../utils/applyLink';
 import { scoreJob, compareByScore, getMatchLabel } from '../utils/jobScorer';
+import { expandSearchTerms } from '../utils/searchLexicon';
 
 /**
  * Internal helper: retry a Prisma call up to `retries` times with a short
@@ -62,18 +63,21 @@ export const getJobs = async (req: Request, res: Response): Promise<any> => {
         ? (experienceLevel.toUpperCase() as ExperienceLevel)
         : undefined;
 
+    const searchTerms = search ? expandSearchTerms(search) : [];
+
     const where: any = {
       isActive: true,
       ...(category     && { category:       { equals: category,      mode: 'insensitive' } }),
       ...(location     && { location:       { contains: location,     mode: 'insensitive' } }),
       ...(employmentType && { employmentType: { contains: employmentType, mode: 'insensitive' } }),
       ...(parsedExpLevel && { experienceLevel: parsedExpLevel }),
-      ...(search && {
-        OR: [
-          { title:       { contains: search, mode: 'insensitive' } },
-          { company:     { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ],
+      ...(searchTerms.length > 0 && {
+        OR: searchTerms.flatMap((term) => [
+          { title:       { contains: term, mode: 'insensitive' } },
+          { company:     { contains: term, mode: 'insensitive' } },
+          { category:    { contains: term, mode: 'insensitive' } },
+          { description: { contains: term, mode: 'insensitive' } },
+        ]),
       }),
     };
 
