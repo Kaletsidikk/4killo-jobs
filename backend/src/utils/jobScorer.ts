@@ -1,130 +1,200 @@
 /**
- * Job Matching Algorithm –  Scorer
+ * Job Matching Algorithm – Comprehensive Intelligent Scorer
  *
- * Computes a relevance score (0–100) for a single job against a user's
- * saved Preference record.  
-
- *
- * ─── Score breakdown ─────────────────────────────────────────────────────────
- *  Signal                  Points   Notes
- *  ──────────────────────────────────────────────────────────────────────────
- *  Category match            40     Case-insensitive exact match against any
- *                                   of the user's preferred categories array.
- *  Location match            30     Case-insensitive substring: user pref
- *                                   "Addis" matches "Addis Ababa", etc.
- *  Experience level match    20     Exact enum comparison.
- *  Freshness (≤ 7 days)      10     Job created within the last 7 days.
- *  ──────────────────────────────────────────────────────────────────────────
- *  Maximum possible score   100
- * ─────────────────────────────────────────────────────────────────────────────
- *
- * Breakdown string format:  "category,location,experience,fresh"
- * Each segment is the awarded points so callers can surface match reasons.
+ * Computes a relevance score (0–100) for a job against a user's preferences.
+ * Handles synonyms, title heuristics, subcategories, location normalization,
+ * and experience level matching.
  */
 
 export interface MatchedJob {
-  score:          number;
-  matchReasons:   MatchReasons;
+  score: number;
+  matchReasons: MatchReasons;
 }
 
 export interface MatchReasons {
-  category:   boolean;   // user pref category matched
-  location:   boolean;   // user pref location matched
-  experience: boolean;   // experience level matched
-  fresh:      boolean;   // posted within last 7 days
+  category: boolean;
+  location: boolean;
+  experience: boolean;
+  fresh: boolean;
 }
 
 export interface ScorerPrefs {
-  categories:      string[];
-  locations:       string[];
+  categories: string[];
+  locations: string[];
   experienceLevel: string;
 }
-
-const WEIGHTS = {
-  category:   40,
-  location:   30,
-  experience: 20,
-  fresh:      10,
-} as const;
 
 const FRESHNESS_DAYS = 7;
 
 /**
- * Maps a 0–100 score to a human-readable match tier label.
- *
- *  90–100 → 'Top Match'
- *  60–89  → 'Strong Match'
- *  30–59  → 'Partial Match'
- *   1–29  → 'Nearby'
- *      0  → null  (no badge shown)
+ * Maps known user selection tags to related tokens/subcategories in the database
  */
+const CATEGORY_SYNONYMS: Record<string, string[]> = {
+  "software development": [
+    "software", "developer", "engineer", "it & software", "tech & software",
+    "web", "frontend", "backend", "fullstack", "programming", "code", "dev"
+  ],
+  "it & software": [
+    "software", "developer", "it", "tech", "web", "computer", "systems"
+  ],
+  "it & networking": [
+    "it", "networking", "network", "system admin", "hardware", "infrastructure", "telecom"
+  ],
+  "finance & accounting": [
+    "finance", "accounting", "accountant", "banking", "audit", "cashier", "bookkeeper", "tax"
+  ],
+  "banking & finance": [
+    "banking", "finance", "bank", "accountant", "credit", "loan", "auditor"
+  ],
+  "marketing": [
+    "marketing", "social media", "outreach", "advert", "digital marketing", "seo", "branding"
+  ],
+  "sales": [
+    "sales", "cashier", "seller", "outreach", "agent", "commercial", "retail", "store"
+  ],
+  "sales & marketing": [
+    "sales", "marketing", "promoter", "cashier", "seller", "advert"
+  ],
+  "human resources": [
+    "human resources", "hr", "talent", "recruiter", "personnel", "administration"
+  ],
+  "administration": [
+    "admin", "administration", "assistant", "secretary", "office", "clerk", "receptionist"
+  ],
+  "engineering": [
+    "engineering", "engineer", "civil", "mechanical", "electrical", "construction", "architect"
+  ],
+  "healthcare": [
+    "health", "nurse", "midwife", "doctor", "medical", "clinic", "pharmacy", "hospital"
+  ],
+};
+
 export type MatchLabel = 'Top Match' | 'Strong Match' | 'Partial Match' | 'Nearby' | null;
 
 export function getMatchLabel(score: number): MatchLabel {
-  if (score >= 90) return 'Top Match';
-  if (score >= 60) return 'Strong Match';
-  if (score >= 30) return 'Partial Match';
-  if (score >= 1)  return 'Nearby';
+  if (score >= 80) return 'Top Match';
+  if (score >= 50) return 'Strong Match';
+  if (score >= 25) return 'Partial Match';
+  if (score >= 10) return 'Nearby';
   return null;
 }
 
 /**
  * Score a single job against the user's preferences.
- *
- * @param job   - Minimal job fields needed for scoring
- * @param prefs - The user's Preference record
  */
 export function scoreJob(
   job: {
-    category:        string;
-    location:        string;
+    title: string;
+    category: string;
+    location: string;
     experienceLevel: string;
-    createdAt:       Date;
+    createdAt: Date;
   },
   prefs: ScorerPrefs,
 ): MatchedJob {
   const reasons: MatchReasons = {
-    category:   false,
-    location:   false,
+    category: false,
+    location: false,
     experience: false,
-    fresh:      false,
+    fresh: false,
   };
 
-  // ── Category: any preferred category matches the job's category ────────────
+  const titleLower = (job.title || "").toLowerCase();
+  const categoryLower = (job.category || "").toLowerCase();
+  const locationLower = (job.location || "").toLowerCase();
+
+  let categoryPoints = 0;
+
+  // ── 1. Category Matching (Max 60 points) ──────────────────────────────────
   if (prefs.categories.length > 0) {
-    const jobCat = job.category.toLowerCase();
-    reasons.category = prefs.categories.some(
-      (c) => c.toLowerCase() === jobCat,
-    );
+    for (const prefCat of prefs.categories) {
+      const prefLower = prefCat.toLowerCase().trim();
+
+      // A. Exact or mutual substring match on category
+      if (
+        categoryLower === prefLower ||
+        categoryLower.includes(prefLower) ||
+        prefLower.includes(categoryLower)
+      ) {
+        reasons.category = true;
+        categoryPoints = Math.max(categoryPoints, 60);
+        break;
+      }
+
+      // B. Title matching against category name (e.g. title has "Developer" or "Software")
+      const words = prefLower.split(/[\s&/,]+/).filter(w => w.length > 2);
+      const titleMatches = words.some(w => titleLower.includes(w));
+      if (titleMatches) {
+        reasons.category = true;
+        categoryPoints = Math.max(categoryPoints, 50);
+        break;
+      }
+
+      // C. Synonym / Subcategory heuristic match
+      const synonyms = CATEGORY_SYNONYMS[prefLower] || [];
+      const synonymMatch = synonyms.some(syn => 
+        categoryLower.includes(syn) || titleLower.includes(syn)
+      );
+
+      if (synonymMatch) {
+        reasons.category = true;
+        categoryPoints = Math.max(categoryPoints, 45);
+        break;
+      }
+    }
   }
 
-  // ── Location: any preferred location is a substring of the job's location ──
-  // e.g. pref "Addis" matches job location "Addis Ababa"
+  // ── 2. Location Matching (Max 25 points) ──────────────────────────────────
+  let locationPoints = 0;
   if (prefs.locations.length > 0) {
-    const jobLoc = job.location.toLowerCase();
-    reasons.location = prefs.locations.some(
-      (l) => jobLoc.includes(l.toLowerCase()) || l.toLowerCase().includes(jobLoc),
-    );
+    for (const prefLoc of prefs.locations) {
+      const locLower = prefLoc.toLowerCase().trim();
+
+      // Exact or substring match (e.g. "Addis Ababa (Kazanchis)" contains "Addis Ababa")
+      if (
+        locationLower.includes(locLower) ||
+        locLower.includes(locationLower) ||
+        (locLower === "remote" && (locationLower.includes("remote") || titleLower.includes("remote")))
+      ) {
+        reasons.location = true;
+        locationPoints = 25;
+        break;
+      }
+    }
   }
 
-  // ── Experience level: exact enum match ─────────────────────────────────────
-  reasons.experience =
-    prefs.experienceLevel !== 'NOT_SPECIFIED' &&
-    job.experienceLevel === prefs.experienceLevel;
+  // ── 3. Experience Level Matching (Max 10 points) ──────────────────────────
+  let experiencePoints = 0;
+  if (prefs.experienceLevel && prefs.experienceLevel !== "NOT_SPECIFIED") {
+    if (job.experienceLevel === prefs.experienceLevel) {
+      reasons.experience = true;
+      experiencePoints = 10;
+    }
+  }
 
-  // ── Freshness: job created within the last N days ──────────────────────────
-  const ageMs   = Date.now() - new Date(job.createdAt).getTime();
+  // ── 4. Freshness (Max 5 points) ──────────────────────────────────────────
+  let freshPoints = 0;
+  const ageMs = Date.now() - new Date(job.createdAt).getTime();
   const ageDays = ageMs / (1000 * 60 * 60 * 24);
-  reasons.fresh = ageDays <= FRESHNESS_DAYS;
+  if (ageDays <= FRESHNESS_DAYS) {
+    reasons.fresh = true;
+    freshPoints = 5;
+  }
 
-  // ── Compute total score ────────────────────────────────────────────────────
-  const score =
-    (reasons.category   ? WEIGHTS.category   : 0) +
-    (reasons.location   ? WEIGHTS.location   : 0) +
-    (reasons.experience ? WEIGHTS.experience : 0) +
-    (reasons.fresh      ? WEIGHTS.fresh      : 0);
+  const hasSpecificPreferences = prefs.categories.length > 0;
+  
+  // Strictness gate: If user specified categories, but this job didn't match category at all,
+  // do NOT let a location match propel an unrelated job into top results.
+  let finalScore = categoryPoints + locationPoints + experiencePoints + freshPoints;
+  if (hasSpecificPreferences && !reasons.category) {
+    // Unrelated job gets clamped to a low score so it never outranks matching jobs
+    finalScore = Math.min(finalScore, 5);
+  }
 
-  return { score, matchReasons: reasons };
+  return {
+    score: Math.min(100, Math.max(0, finalScore)),
+    matchReasons: reasons,
+  };
 }
 
 /**

@@ -160,14 +160,22 @@ function ForYou({ onJobSelect }: ForYouProps) {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-base font-bold text-slate-950 truncate">
-                      {job.title}
-                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-950 truncate">
+                        {job.title}
+                      </h2>
+                      {job.matchLabel && (
+                        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                          {job.matchLabel}
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                       <span className="font-medium text-slate-700">{job.company}</span>
                       {job.sources.length > 0 && (
                         <CheckCircle size={13} className="text-sky-500" />
                       )}
+                      <span className="text-[11px] text-slate-400">· {job.category}</span>
                     </div>
                   </div>
 

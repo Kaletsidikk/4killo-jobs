@@ -21,6 +21,8 @@ export interface Job {
   sources: JobSource[];
   sourceCount: number;
   isSaved: boolean;
+  score?: number;
+  matchLabel?: string | null;
 }
 
 export interface JobDetails extends Job {

@@ -391,6 +391,7 @@ export const getForYouJobs = async (req: AuthRequest, res: Response): Promise<an
     const scored = allJobs.map((job) => {
       const { score, matchReasons } = scoreJob(
         {
+          title:           job.title,
           category:        job.category,
           location:        job.location,
           experienceLevel: job.experienceLevel,
