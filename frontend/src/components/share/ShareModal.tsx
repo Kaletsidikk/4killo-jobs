@@ -119,41 +119,29 @@ export function ShareModal({ job, sourceUrl, onClose }: ShareModalProps) {
         </div>
 
         {/* Share Channels Grid */}
-        <div className="mt-5 grid grid-cols-3 gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-3">
           {/* Telegram */}
           <button
             type="button"
             onClick={handleTelegramShare}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-sky-200/60 bg-gradient-to-b from-sky-50/90 to-sky-100/70 p-3.5 text-sky-700 shadow-xs backdrop-blur-sm transition active:scale-95 hover:border-sky-300"
+            className="flex items-center justify-center gap-2.5 rounded-2xl border border-sky-200/70 bg-gradient-to-r from-sky-50 to-sky-100/70 p-3.5 text-sky-800 shadow-xs backdrop-blur-sm transition active:scale-95 hover:border-sky-300"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-md shadow-sky-500/25">
-              <Send size={20} className="-ml-0.5 mt-0.5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-white shadow-md shadow-sky-500/25">
+              <Send size={18} className="-ml-0.5 mt-0.5" />
             </div>
-            <span className="text-xs font-bold">Telegram</span>
+            <span className="text-xs font-bold">Share to Telegram</span>
           </button>
 
           {/* WhatsApp */}
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-200/60 bg-gradient-to-b from-emerald-50/90 to-emerald-100/70 p-3.5 text-emerald-700 shadow-xs backdrop-blur-sm transition active:scale-95 hover:border-emerald-300"
+            className="flex items-center justify-center gap-2.5 rounded-2xl border border-emerald-200/70 bg-gradient-to-r from-emerald-50 to-emerald-100/70 p-3.5 text-emerald-800 shadow-xs backdrop-blur-sm transition active:scale-95 hover:border-emerald-300"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-md shadow-emerald-500/25">
-              <MessageCircle size={20} />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-500/25">
+              <MessageCircle size={18} />
             </div>
-            <span className="text-xs font-bold">WhatsApp</span>
-          </button>
-
-          {/* Native / More */}
-          <button
-            type="button"
-            onClick={handleNativeShare}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-indigo-200/60 bg-gradient-to-b from-indigo-50/90 to-indigo-100/70 p-3.5 text-indigo-700 shadow-xs backdrop-blur-sm transition active:scale-95 hover:border-indigo-300"
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-600/25">
-              <ExternalLink size={20} />
-            </div>
-            <span className="text-xs font-bold">More</span>
+            <span className="text-xs font-bold">Share to WhatsApp</span>
           </button>
         </div>
 

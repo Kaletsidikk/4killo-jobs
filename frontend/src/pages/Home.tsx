@@ -110,14 +110,6 @@ function Home({ onJobSelect }: HomeProps) {
       experienceLevel,
       employmentType,
     }) => {
-      console.log("Voxide searchJobs called:", {
-        keyword,
-        category,
-        location,
-        experienceLevel,
-        employmentType,
-      });
-
       // Inject all voice parameters into search state
       setSearch(keyword ?? "");
       setSearchInput(keyword ?? "");
@@ -126,10 +118,11 @@ function Home({ onJobSelect }: HomeProps) {
       setSelectedExperienceLevel(experienceLevel ?? "");
       setSelectedEmploymentType(employmentType ?? "");
       setVoiceActive(true);
+      setPage(1);
 
       return {
         status: "success",
-        count: 0,
+        message: `Applied filters for ${keyword || category || location || "vacancies"}`,
         appliedFilters: {
           keyword,
           category,
@@ -137,6 +130,17 @@ function Home({ onJobSelect }: HomeProps) {
           experienceLevel,
           employmentType,
         },
+      };
+    },
+  },
+  clearFilters: {
+    description: "Reset and clear all active search and voice filters to show all jobs.",
+    params: {},
+    handler: async () => {
+      clearVoiceFilters();
+      return {
+        status: "success",
+        message: "All filters have been cleared.",
       };
     },
   },
@@ -359,16 +363,15 @@ const loadMoreJobs = async () => {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
 
             <button
               type="button"
               onClick={toggleLanguage}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100 active:scale-95 shadow-xs"
-              title="Switch language between English and Amharic"
+              className="flex h-9 min-w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 transition hover:bg-slate-100 active:scale-95 shadow-xs"
+              title="Switch language between EN and አማ"
             >
-              <span>{t.langLabel}</span>
-              <span className="text-[10px] text-slate-400 font-normal">({lang === "EN" ? "Amharic" : "English"})</span>
+              {lang === "EN" ? "አማ" : "EN"}
             </button>
 
             <div className="relative">
@@ -389,27 +392,16 @@ const loadMoreJobs = async () => {
       {/* ================= GREETING ================= */}
       <section className="px-5 pb-4 pt-5">
 
-        <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold">
+            {t.greeting}
+          </h1>
 
-          <div>
-            <h1 className="text-xl font-bold">
-              {t.greeting}
-            </h1>
-
-            <p className="mt-1 text-xs text-slate-500">
-              {t.subgreeting}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1.5 pt-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-
-            <span className="text-xs font-medium text-emerald-600">
-              {t.newJobs}
-            </span>
-          </div>
-
+          <p className="mt-1 text-xs text-slate-500">
+            {t.subgreeting}
+          </p>
         </div>
+
       </section>
 
       {/* ================= SEARCH ================= */}
