@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVoxideVoice } from "@voxide/react";
 import { ai } from "../services/voxide";
 
 import {
   Search,
   Mic,
+  MicOff,
   ChevronDown,
   SlidersHorizontal,
   Bookmark,
@@ -20,7 +21,9 @@ import {
   getJobs, 
   getJobCategories,
   saveJob,
-  unsaveJob, } from "../services/jobs";
+  unsaveJob,
+  parseVoiceIntent,
+} from "../services/jobs";
 import type { Job } from "../types/job";
 interface HomeProps {
   onJobSelect: (job: Job) => void;
@@ -48,6 +51,10 @@ console.log("Voxide voice messages:", messages);
   const [selectedEmploymentType, setSelectedEmploymentType] = useState("");
   const [voiceActive, setVoiceActive] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceError, setVoiceError] = useState("");
+  const recognitionRef = useRef<any>(null);
 
     ai.register({
   searchJobs: {
@@ -135,7 +142,78 @@ console.log("Voxide voice messages:", messages);
     },
   },
 });
-  console.log("Voxide searchJobs capability registered");
+
+  const handleVoiceTap = () => {
+    setVoiceError("");
+
+    // If already listening — stop
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceError("Voice search is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-ET"; // Ethiopian English, falls back to en-US
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceTranscript("");
+    };
+
+    recognition.onresult = async (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setVoiceTranscript(transcript);
+      setIsListening(false);
+
+      try {
+        // Parse intent via backend NLU pipeline (Amharic + English)
+        const intent = await parseVoiceIntent(transcript);
+        setSearch(intent.keyword ?? transcript);
+        setSearchInput(intent.keyword ?? transcript);
+        setSelectedCategory(intent.category ?? "");
+        setSelectedLocation(intent.location ?? "");
+        setSelectedExperienceLevel(intent.experienceLevel ?? "");
+        setSelectedEmploymentType(intent.employmentType ?? "");
+        setVoiceActive(true);
+        setPage(1);
+
+        // Also send to Voxide for AI conversation response
+        sendText(transcript);
+      } catch {
+        // Fallback: just use raw transcript as keyword search
+        setSearch(transcript);
+        setSearchInput(transcript);
+        setVoiceActive(true);
+        setPage(1);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      if (event.error === "not-allowed") {
+        setVoiceError("Microphone permission denied. Please allow access in your browser settings.");
+      } else if (event.error !== "no-speech") {
+        setVoiceError("Voice recognition failed. Please try again.");
+      }
+    };
+
+    recognition.onend = () => setIsListening(false);
+
+    recognition.start();
+  };
 
   const handleToggleSave = async (job: Job) => {
   try {
@@ -353,16 +431,61 @@ const loadMoreJobs = async () => {
 
           <button
             type="button"
-            //onClick={() => connect()}
-            onClick={() => sendText("Find banking jobs")}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white"
+            onClick={handleVoiceTap}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${
+              isListening
+                ? "animate-pulse bg-red-500 text-white"
+                : "bg-emerald-600 text-white"
+            }`}
+            title={isListening ? "Tap to stop listening" : "Tap to speak"}
           >
-            <Mic size={18} />
+            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
           </button>
 
         </div>
 
       </section>
+
+      {/* ====== LISTENING OVERLAY ====== */}
+      {isListening && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-5 w-full max-w-xs rounded-3xl bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-50">
+              <span className="flex h-14 w-14 animate-ping items-center justify-center rounded-full bg-red-100">
+                <Mic size={28} className="text-red-500" />
+              </span>
+            </div>
+            <p className="mt-5 text-lg font-bold text-slate-900">Listening…</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Speak in English or Amharic
+            </p>
+            {voiceTranscript && (
+              <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm italic text-slate-700">
+                "{voiceTranscript}"
+              </p>
+            )}
+            <button
+              onClick={handleVoiceTap}
+              className="mt-5 w-full rounded-2xl bg-red-500 py-3 text-sm font-semibold text-white"
+            >
+              Stop
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ====== VOICE ERROR TOAST ====== */}
+      {voiceError && (
+        <div className="fixed bottom-24 left-5 right-5 z-40 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700 shadow-lg">
+          {voiceError}
+          <button
+            onClick={() => setVoiceError("")}
+            className="ml-2 font-bold text-red-500"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* ================= VOICE ACTIVE FILTER BANNER ================= */}
       {voiceActive && (

@@ -76,3 +76,17 @@ export async function unsaveJob(jobId: string) {
 export async function getSavedJobs(): Promise<JobsResponse> {
   return apiRequest("/jobs/saved");
 }
+
+export async function getForYouJobs(
+  page = 1,
+  limit = 10
+): Promise<JobsResponse> {
+  return apiRequest(`/jobs/for-you?page=${page}&limit=${limit}`);
+}
+
+export async function parseVoiceIntent(transcript: string) {
+  return apiRequest("/voice/parse-intent", {
+    method: "POST",
+    body: JSON.stringify({ transcript }),
+  });
+}

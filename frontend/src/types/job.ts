@@ -2,6 +2,7 @@ export interface JobSource {
   postUrl: string;
   sourceName: string;
   postedAt: string;
+  rawText?: string;
 }
 
 export interface Job {

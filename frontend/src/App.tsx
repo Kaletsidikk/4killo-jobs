@@ -12,51 +12,70 @@ import BottomNav from "./components/navigation/BottomNav";
 import type { Job } from "./types/job";
 import JobDetails from "./pages/JobDetails";
 
+const ONBOARDING_KEY = "4killo_onboarding_done";
+
 function App() {
   useEffect(() => {
-  ai.init().catch((error) => {
-    console.error("Voxide initialization failed:", error);
-  });
-}, []);
+    ai.init().catch((error) => {
+      console.error("Voxide initialization failed:", error);
+    });
+  }, []);
+
   useTelegram();
 
   const [activeTab, setActiveTab] = useState("Home");
 
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  // Persisted onboarding — only show if user hasn't completed it before
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => localStorage.getItem(ONBOARDING_KEY) !== "true"
+  );
+
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  // Show onboarding for now
+  const handleOnboardingComplete = () => {
+    localStorage.setItem(ONBOARDING_KEY, "true");
+    setShowOnboarding(false);
+  };
+
+  const handleJobSelect = (job: Job) => {
+    setSelectedJob(job);
+  };
+
+  const handleJobBack = () => {
+    setSelectedJob(null);
+  };
+
   if (showOnboarding) {
     return (
       <div className="min-h-screen bg-blue-50">
-        <Onboarding onComplete={() => setShowOnboarding(false)}/>
+        <Onboarding onComplete={handleOnboardingComplete} />
       </div>
     );
   }
+
   if (selectedJob) {
-  return (
-    <JobDetails
-      job={selectedJob}
-      onBack={() => setSelectedJob(null)}
-    />
-  );
-}
+    return (
+      <JobDetails
+        job={selectedJob}
+        onBack={handleJobBack}
+      />
+    );
+  }
 
   const renderPage = () => {
     switch (activeTab) {
       case "For You":
-        return <ForYou />;
+        return <ForYou onJobSelect={handleJobSelect} />;
 
       case "Saved":
-        return <Saved />;
+        return <Saved onJobSelect={handleJobSelect} />;
 
       case "Settings":
         return <Settings />;
 
       case "Home":
       default:
-        return (<Home 
-        onJobSelect={(job) => setSelectedJob(job)}/>);
+        return <Home onJobSelect={handleJobSelect} />;
     }
   };
 

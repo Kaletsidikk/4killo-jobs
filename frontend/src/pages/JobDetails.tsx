@@ -301,22 +301,45 @@ const getApplyLabel = () => {
   </section>
 )}
 
-      {/* Source */}
-      {sourceUrl && (
+      {/* Original Source and Untouched Raw Post */}
+      {jobDetails?.sources && jobDetails.sources.length > 0 && (
         <section className="px-5 pt-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900">
+                Untouched Announcement
+              </h2>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                {jobDetails.sources[0].sourceName}
+              </span>
+            </div>
 
-          <h2 className="text-base font-bold">
-            Original Posting
-          </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              Direct raw message collected from Telegram channel
+            </p>
 
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            This job was collected from:
-          </p>
+            {jobDetails.sources[0].rawText ? (
+              <div className="mt-3 max-h-96 overflow-y-auto rounded-xl bg-slate-50 p-3.5 text-xs font-mono leading-relaxed text-slate-700 whitespace-pre-wrap select-text border border-slate-200/60">
+                {jobDetails.sources[0].rawText}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500 italic">
+                Raw message text not captured for this source.
+              </p>
+            )}
 
-          <p className="mt-1 text-sm font-medium text-slate-800">
-            {job.sources[0].sourceName}
-          </p>
-
+            {sourceUrl && (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                <span>View original Telegram post</span>
+                <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
         </section>
       )}
 
