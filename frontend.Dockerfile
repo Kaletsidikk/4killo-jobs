@@ -2,13 +2,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm install && npm install -g typescript
 
 COPY frontend/ ./
 
 ENV VITE_API_URL=https://backend-production-ce37b.up.railway.app/api
 
-RUN npm run build
+RUN npx vite build
 
 # ── Production image ──────────────────────────────────────────────────────────
 FROM node:20-alpine
