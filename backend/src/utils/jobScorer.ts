@@ -110,35 +110,36 @@ export function scoreJob(
     for (const prefCat of prefs.categories) {
       const prefLower = prefCat.toLowerCase().trim();
 
-      // A. Exact or mutual substring match on category
+      // A. Direct category matches (IT & Software, Tech & Software) get highest priority
       if (
         categoryLower === prefLower ||
-        categoryLower.includes(prefLower) ||
-        prefLower.includes(categoryLower)
+        categoryLower === "it & software" ||
+        categoryLower === "tech & software"
       ) {
         reasons.category = true;
-        categoryPoints = Math.max(categoryPoints, 60);
+        categoryPoints = Math.max(categoryPoints, 70);
         break;
       }
 
-      // B. Title matching against category name (e.g. title has "Developer" or "Software")
-      const words = prefLower.split(/[\s&/,]+/).filter(w => w.length > 2);
-      const titleMatches = words.some(w => titleLower.includes(w));
-      if (titleMatches) {
+      // B. Strong tech title matches (Developer, Programmer, Software Engineer, Web Developer)
+      const strongTechKeywords = ["developer", "software", "programmer", "frontend", "backend", "fullstack", "web dev"];
+      const hasStrongTech = strongTechKeywords.some(kw => titleLower.includes(kw));
+      if (hasStrongTech && prefLower.includes("software")) {
         reasons.category = true;
-        categoryPoints = Math.max(categoryPoints, 50);
+        categoryPoints = Math.max(categoryPoints, 65);
         break;
       }
 
-      // C. Synonym / Subcategory heuristic match
+      // C. General synonyms, excluding generic terms like "development" in agricultural/business contexts
       const synonyms = CATEGORY_SYNONYMS[prefLower] || [];
-      const synonymMatch = synonyms.some(syn => 
-        categoryLower.includes(syn) || titleLower.includes(syn)
-      );
+      const synonymMatch = synonyms.some(syn => {
+        if (syn === "development" || syn === "systems") return false; // avoid false positives with business/livestock development
+        return categoryLower.includes(syn) || titleLower.includes(syn);
+      });
 
       if (synonymMatch) {
         reasons.category = true;
-        categoryPoints = Math.max(categoryPoints, 45);
+        categoryPoints = Math.max(categoryPoints, 40);
         break;
       }
     }
