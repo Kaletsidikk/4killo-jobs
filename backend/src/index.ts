@@ -24,6 +24,17 @@ app.use("/api/sources", sourcesRoutes);
 app.use("/api/voice", voiceRoutes);
 
 
+app.get("/", (_req, res) => {
+  res.json({
+    name: "4KILLO Jobs API",
+    status: "online",
+    health: "/health",
+    jobs: "/api/jobs",
+    voice: "/api/voice",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",

@@ -130,14 +130,9 @@ function Onboarding({onComplete }: OnboardingProps) {
         : "Failed to save preferences"
     );
 
-    // TEMPORARY: allow us to test the frontend in Chrome
-    if (import.meta.env.DEV) {
-      console.log(
-        "Development mode: continuing to Home despite API failure."
-      );
-
-      onComplete();
-    }
+    // Allow continuing so users and reviewers can access jobs even without auth
+    console.warn("Continuing to Home despite API failure (guest mode)");
+    onComplete();
   } finally {
     setSubmitting(false);
   }

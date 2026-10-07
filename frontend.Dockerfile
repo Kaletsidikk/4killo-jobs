@@ -6,6 +6,8 @@ RUN npm install
 
 COPY frontend/ ./
 
+ENV VITE_API_URL=https://backend-production-ce37b.up.railway.app/api
+
 RUN npm run build
 
 # ── Production image ──────────────────────────────────────────────────────────
