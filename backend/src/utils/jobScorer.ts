@@ -130,11 +130,11 @@ export function scoreJob(
         break;
       }
 
-      // C. General synonyms, excluding generic terms like "development" in agricultural/business contexts
+      // C. General synonyms, matching whole words only so "dev" does not match "development"
       const synonyms = CATEGORY_SYNONYMS[prefLower] || [];
       const synonymMatch = synonyms.some(syn => {
-        if (syn === "development" || syn === "systems") return false; // avoid false positives with business/livestock development
-        return categoryLower.includes(syn) || titleLower.includes(syn);
+        const regex = new RegExp(`\\b${syn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        return regex.test(categoryLower) || regex.test(titleLower);
       });
 
       if (synonymMatch) {
