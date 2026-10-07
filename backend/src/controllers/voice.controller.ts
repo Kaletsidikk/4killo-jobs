@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { ExperienceLevel } from '@prisma/client';
-import { parseEthiopianVoiceIntent, SearchJobsParams } from '@4killo/shared';
+import { parseEthiopianVoiceIntent, SearchJobsParams } from '../shared/voxide';
 import { resolveApplyLink } from '../utils/applyLink';
 
 /**

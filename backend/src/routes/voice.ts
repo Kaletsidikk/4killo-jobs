@@ -3,7 +3,7 @@ import {
   VOXIDE_CAPABILITY_MANIFEST,
   VOXIDE_SYSTEM_PROMPT,
   parseEthiopianVoiceIntent,
-} from '@4killo/shared';
+} from '../shared/voxide';
 import { optionalAuth } from '../middleware/auth';
 import { voiceSearch, voiceSearchGet } from '../controllers/voice.controller';
 
