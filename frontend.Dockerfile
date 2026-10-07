@@ -18,7 +18,8 @@ COPY --from=builder /app/frontend/dist ./dist
 RUN npm install -g serve
 
 ENV NODE_ENV=production
+ENV PORT=8080
 
-EXPOSE 3000
+EXPOSE 8080
 
-CMD serve dist -s -l ${PORT:-3000}
+CMD ["sh", "-c", "serve dist -s -l $PORT"]
