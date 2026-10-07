@@ -28,10 +28,28 @@ export function useTelegram() {
           viewport.expand();
         }
 
-        // Get Telegram launch parameters
-        const launchParams = retrieveLaunchParams();
+        // Get Telegram launch parameters from @tma.js/sdk or window.Telegram.WebApp fallback
+        let initData: string | undefined;
 
-        const initData = launchParams.initDataRaw as string | undefined;
+        try {
+          const launchParams = retrieveLaunchParams();
+          initData = launchParams.initDataRaw;
+        } catch {
+          // Fallback to native window.Telegram.WebApp if retrieveLaunchParams throws
+          const tg = (window as any).Telegram?.WebApp;
+          if (tg) {
+            tg.ready?.();
+            tg.expand?.();
+            initData = tg.initData;
+          }
+        }
+
+        if (!initData) {
+          const tg = (window as any).Telegram?.WebApp;
+          if (tg?.initData) {
+            initData = tg.initData;
+          }
+        }
 
         if (!initData) {
           console.log("Telegram initData is not available.");
