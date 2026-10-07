@@ -18,8 +18,11 @@ import {
   FileCheck2,
   CalendarDays,
   ShieldCheck,
+  Check,
 } from "lucide-react";
 import { getJobById, saveJob, unsaveJob } from "../services/jobs";
+import { isLocalJobSaved } from "../services/savedStorage";
+import { useAppLanguage } from "../services/language";
 import type { Job, JobDetails as JobDetailsType } from "../types/job";
 
 interface JobDetailsProps {
@@ -31,7 +34,15 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
   const [jobDetails, setJobDetails] = useState<JobDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isSaved, setIsSaved] = useState(job.isSaved);
+  const [isSaved, setIsSaved] = useState(() => job.isSaved || isLocalJobSaved(job.id));
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const { t } = useAppLanguage();
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -41,7 +52,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
         const data = await getJobById(job.id);
         setJobDetails(data);
         if (data.isSaved !== undefined) {
-          setIsSaved(data.isSaved);
+          setIsSaved(data.isSaved || isLocalJobSaved(job.id));
         }
       } catch (err) {
         console.error("Failed to load job details:", err);
@@ -67,12 +78,51 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
       if (isSaved) {
         await unsaveJob(job.id);
         setIsSaved(false);
+        showToast(t.unsavedSuccess);
       } else {
-        await saveJob(job.id);
+        await saveJob(jobDetails || job);
         setIsSaved(true);
+        showToast(t.savedSuccess);
       }
     } catch (err) {
       console.error("Failed to toggle save:", err);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = sourceUrl || window.location.href;
+    const shareText = `Check out this verified vacancy on 4KILLO: ${job.title} at ${job.company}`;
+
+    // 1. Try Telegram WebApp openTelegramLink / sendData
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.openTelegramLink && sourceUrl) {
+      // In telegram, opening the link directly
+      window.open(sourceUrl, "_blank");
+      showToast(t.shareSuccess);
+      return;
+    }
+
+    // 2. Try Web Share API (mobile devices)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${job.title} - 4KILLO`,
+          text: shareText,
+          url: shareUrl,
+        });
+        showToast(t.shareSuccess);
+        return;
+      } catch (err) {
+        // User cancelled or share dismissed
+      }
+    }
+
+    // 3. Fallback: Copy to clipboard
+    try {
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+      showToast(t.shareSuccess);
+    } catch {
+      showToast("Link: " + shareUrl);
     }
   };
 
@@ -96,18 +146,18 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
 
   const getApplyButton = () => {
     if (applicationUrl) {
-      return { label: "Apply Online", sub: "Official Link", icon: <ExternalLink size={18} /> };
+      return { label: t.applyNow, sub: "Official Portal", icon: <ExternalLink size={18} /> };
     }
     if (applicationEmail) {
-      return { label: "Send Email Application", sub: applicationEmail, icon: <Mail size={18} /> };
+      return { label: `${t.applyNow} (Email)`, sub: applicationEmail, icon: <Mail size={18} /> };
     }
     if (applicationPhone) {
-      return { label: "Call Employer", sub: applicationPhone, icon: <Phone size={18} /> };
+      return { label: `${t.applyNow} (Phone)`, sub: applicationPhone, icon: <Phone size={18} /> };
     }
     if (sourceUrl) {
-      return { label: "Apply on Telegram", sub: primarySource?.sourceName || "Direct Channel", icon: <Send size={18} /> };
+      return { label: `${t.applyNow} (Telegram)`, sub: primarySource?.sourceName || "Direct Channel", icon: <Send size={18} /> };
     }
-    return { label: "View Telegram Post", sub: "Original Posting", icon: <ExternalLink size={18} /> };
+    return { label: t.openOriginal, sub: "Original Posting", icon: <ExternalLink size={18} /> };
   };
 
   // Convert comma or newline separated requirements into clear, distinct badge pills
@@ -125,6 +175,14 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-36 text-slate-900">
+      {/* Toast notification */}
+      {toastMessage && (
+        <div className="fixed top-5 left-5 right-5 z-50 flex items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-600 px-4 py-3 text-xs font-semibold text-white shadow-xl animate-in fade-in slide-in-from-top-4">
+          <Check size={16} className="shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Top Navigation */}
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-5 py-3.5 backdrop-blur shadow-xs">
         <div className="flex items-center justify-between">
@@ -142,23 +200,22 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
               onClick={handleToggleSave}
               className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${
                 isSaved
-                  ? "bg-emerald-50 text-emerald-600"
+                  ? "bg-emerald-50 text-emerald-600 shadow-xs"
                   : "bg-slate-100 text-slate-500 hover:text-slate-700"
               }`}
+              title={isSaved ? "Saved to bookmarks" : "Save to bookmarks"}
             >
               <Bookmark size={19} fill={isSaved ? "currentColor" : "none"} />
             </button>
 
-            {sourceUrl && (
-              <button
-                type="button"
-                onClick={() => window.open(sourceUrl, "_blank")}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200"
-                title="Share or View Original Post"
-              >
-                <Share2 size={18} />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95"
+              title="Share job"
+            >
+              <Share2 size={18} />
+            </button>
           </div>
         </div>
       </header>
@@ -179,7 +236,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
               <span className="font-semibold text-sm text-slate-700">{job.company}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
                 <CheckCircle size={12} className="text-blue-600" />
-                Verified Listing
+                {t.verifiedListing}
               </span>
             </div>
 
@@ -201,7 +258,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               <BriefcaseBusiness size={14} className="text-slate-500" />
-              <span>Employment Type</span>
+              <span>{t.employmentType}</span>
             </div>
             <p className="mt-1 text-sm font-bold text-slate-900">
               {job.employmentType || "Full-time"}
@@ -211,7 +268,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               <Layers size={14} className="text-slate-500" />
-              <span>Experience Tier</span>
+              <span>{t.experienceTier}</span>
             </div>
             <p className="mt-1 text-sm font-bold text-slate-900">
               {job.experienceLevel && job.experienceLevel !== "NOT_SPECIFIED"
@@ -223,7 +280,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               <CalendarDays size={14} className="text-slate-500" />
-              <span>Deadline</span>
+              <span>{t.deadline}</span>
             </div>
             <p className="mt-1 text-sm font-bold text-slate-900">
               {job.deadline
@@ -235,10 +292,10 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3.5">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
               <Clock3 size={14} />
-              <span>Offered Compensation</span>
+              <span>{t.offeredSalary}</span>
             </div>
             <p className="mt-1 text-sm font-bold text-emerald-800">
-              {job.salary || "Negotiable"}
+              {job.salary || t.negotiable}
             </p>
           </div>
         </div>
@@ -264,7 +321,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
               <FileCheck2 size={18} className="text-blue-600" />
-              <span>About the Role</span>
+              <span>{t.roleSummary}</span>
             </div>
             <div className="mt-3.5 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap select-text">
               {jobDetails.description}
@@ -277,7 +334,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
               <Sparkles size={18} className="text-blue-600" />
-              <span>Candidate Requirements</span>
+              <span>{t.candidateRequirements}</span>
             </div>
             <ul className="mt-3.5 space-y-2.5">
               {requirementList.map((req, idx) => (
@@ -294,7 +351,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
               <Sparkles size={18} className="text-blue-600" />
-              <span>Requirements</span>
+              <span>{t.candidateRequirements}</span>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-slate-700 whitespace-pre-wrap select-text">
               {jobDetails.requirements}
@@ -307,7 +364,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
               <GraduationCap size={18} className="text-blue-600" />
-              <span>Education & Degree</span>
+              <span>{t.educationTitle}</span>
             </div>
             <p className="mt-3 text-xs font-semibold text-slate-800">
               {jobDetails.education}

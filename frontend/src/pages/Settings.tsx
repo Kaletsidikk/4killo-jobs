@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Globe, MapPin, Briefcase, Bell, Check, RotateCcw } from "lucide-react";
 import { getPreferences, updatePreferences } from "../services/preferences";
+import { setAppLanguage } from "../services/language";
 import type { Language, ExperienceLevel, UserPreferences } from "../types/preferences";
 
 const ALL_CATEGORIES = [
@@ -84,6 +85,7 @@ function Settings() {
         digestAlerts,
       };
       await updatePreferences(updated);
+      setAppLanguage(language);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     } catch (err) {

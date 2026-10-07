@@ -72,7 +72,7 @@ function ForYou({ onJobSelect }: ForYouProps) {
       if (job.isSaved) {
         await unsaveJob(job.id);
       } else {
-        await saveJob(job.id);
+        await saveJob(job);
       }
 
       setJobs((prev) =>

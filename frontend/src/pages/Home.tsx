@@ -24,6 +24,7 @@ import {
   unsaveJob,
   parseVoiceIntent,
 } from "../services/jobs";
+import { useAppLanguage } from "../services/language";
 import type { Job } from "../types/job";
 interface HomeProps {
   onJobSelect: (job: Job) => void;
@@ -32,10 +33,8 @@ interface HomeProps {
 
 function Home({ onJobSelect }: HomeProps) {
 
+  const { lang, toggleLanguage, t } = useAppLanguage();
   const { status, messages, sendText } = useVoxideVoice(ai);
- 
-console.log("Voxide voice status:", status);
-console.log("Voxide voice messages:", messages);
   
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,7 +219,7 @@ console.log("Voxide voice messages:", messages);
     if (job.isSaved) {
       await unsaveJob(job.id);
     } else {
-      await saveJob(job.id);
+      await saveJob(job);
     }
 
     setJobs((currentJobs) =>
@@ -364,10 +363,12 @@ const loadMoreJobs = async () => {
 
             <button
               type="button"
-              className="flex items-center gap-1 text-sm font-medium text-slate-700"
+              onClick={toggleLanguage}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100 active:scale-95 shadow-xs"
+              title="Switch language between English and Amharic"
             >
-              አማ
-              <ChevronDown size={14} />
+              <span>{t.langLabel}</span>
+              <span className="text-[10px] text-slate-400 font-normal">({lang === "EN" ? "Amharic" : "English"})</span>
             </button>
 
             <div className="relative">
@@ -392,11 +393,11 @@ const loadMoreJobs = async () => {
 
           <div>
             <h1 className="text-xl font-bold">
-              እንኳን ደህና መጡ!
+              {t.greeting}
             </h1>
 
             <p className="mt-1 text-xs text-slate-500">
-              የሚፈልጉትን ስራ ይፈልጉ እና ያመልክቱ።
+              {t.subgreeting}
             </p>
           </div>
 
@@ -404,7 +405,7 @@ const loadMoreJobs = async () => {
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
 
             <span className="text-xs font-medium text-emerald-600">
-              New jobs
+              {t.newJobs}
             </span>
           </div>
 
@@ -425,7 +426,7 @@ const loadMoreJobs = async () => {
   type="text"
   value={searchInput}
   onChange={(e) => setSearchInput(e.target.value)}
-  placeholder="Search title, company, or skills..."
+  placeholder={t.searchPlaceholder}
   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
 />
 

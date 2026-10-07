@@ -1,5 +1,6 @@
 import { apiRequest } from "./api";
-import type { JobsResponse, JobDetails } from "../types/job";
+import type { JobsResponse, JobDetails, Job } from "../types/job";
+import { saveLocalJob, unsaveLocalJob, getLocalSavedJobs } from "./savedStorage";
 
 export async function getJobs(
   
@@ -60,21 +61,59 @@ export async function getJobCategories(): Promise<{
   return apiRequest("/jobs/categories");
 }
 
-//save jobs
-export async function saveJob(jobId: string) {
-  return apiRequest(`/jobs/${jobId}/save`, {
-    method: "POST",
-  });
+// Save job with local fallback
+export async function saveJob(job: Job | string) {
+  const jobId = typeof job === "string" ? job : job.id;
+  if (typeof job !== "string") {
+    saveLocalJob(job);
+  }
+
+  try {
+    return await apiRequest(`/jobs/${jobId}/save`, {
+      method: "POST",
+    });
+  } catch (err) {
+    console.warn("Backend saveJob skipped/failed, saved locally:", err);
+    return { success: true, localOnly: true };
+  }
 }
 
+// Unsave job with local fallback
 export async function unsaveJob(jobId: string) {
-  return apiRequest(`/jobs/${jobId}/save`, {
-    method: "DELETE",
-  });
+  unsaveLocalJob(jobId);
+
+  try {
+    return await apiRequest(`/jobs/${jobId}/save`, {
+      method: "DELETE",
+    });
+  } catch (err) {
+    console.warn("Backend unsaveJob skipped/failed, removed locally:", err);
+    return { success: true, localOnly: true };
+  }
 }
 
 export async function getSavedJobs(): Promise<JobsResponse> {
-  return apiRequest("/jobs/saved");
+  const localSaved = getLocalSavedJobs();
+
+  try {
+    const res = await apiRequest("/jobs/saved");
+    if (res?.data) {
+      // Merge backend bookmarks with any locally bookmarked jobs
+      const backendIds = new Set(res.data.map((j: Job) => j.id));
+      const merged = [
+        ...res.data,
+        ...localSaved.filter((j) => !backendIds.has(j.id)),
+      ];
+      return { data: merged, pagination: res.pagination || { total: merged.length, page: 1, limit: 50, totalPages: 1 } };
+    }
+  } catch (err) {
+    console.warn("Backend getSavedJobs unavailable, using local bookmarks:", err);
+  }
+
+  return {
+    data: localSaved,
+    pagination: { total: localSaved.length, page: 1, limit: 50, totalPages: 1 },
+  };
 }
 
 export async function getForYouJobs(
