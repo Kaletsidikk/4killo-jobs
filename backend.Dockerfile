@@ -2,6 +2,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install TypeScript globally in builder
+RUN npm install -g typescript
+
 # Copy shared package first (backend depends on @4killo/shared)
 COPY shared/ ./shared/
 

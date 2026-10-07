@@ -33,7 +33,7 @@ export function useTelegram() {
 
         try {
           const launchParams = retrieveLaunchParams();
-          initData = launchParams.initDataRaw;
+          initData = launchParams.initDataRaw as string | undefined;
         } catch {
           // Fallback to native window.Telegram.WebApp if retrieveLaunchParams throws
           const tg = (window as any).Telegram?.WebApp;

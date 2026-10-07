@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { VoxideClient, useVoxideVoice } from "@voxide/react";
+import { useVoxideVoice } from "@voxide/react";
 import { ai } from "../services/voxide";
 
 import {
@@ -29,7 +29,7 @@ interface HomeProps {
 
 function Home({ onJobSelect }: HomeProps) {
 
-  const { status, messages, connect, sendText } = useVoxideVoice(ai);
+  const { status, messages, sendText } = useVoxideVoice(ai);
  
 console.log("Voxide voice status:", status);
 console.log("Voxide voice messages:", messages);
