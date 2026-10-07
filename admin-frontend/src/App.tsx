@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-
+import Jobs from "./pages/Jobs";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Sources from "./pages/Sources";
@@ -53,15 +53,15 @@ function App() {
         />
 
         <main className="admin-content">
-          {activePage === "dashboard" && <Dashboard />}
+          {activePage === "dashboard" && (
+  <Dashboard onNavigate={setActivePage} />
+)}
 
-          {activePage === "jobs" && (
-            <h2>Jobs page coming next</h2>
-          )}
+          {activePage === "jobs" && <Jobs />}
 
          {activePage === "sources" && <Sources />}
 
-          {activePage === "scraping" && (
+          {activePage === "users" && (
             <h2>Scraping page coming next</h2>
           )}
 

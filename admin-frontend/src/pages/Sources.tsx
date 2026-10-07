@@ -13,6 +13,7 @@ const Sources = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -33,6 +34,16 @@ const [detailsLoading, setDetailsLoading] =
   const [identifier, setIdentifier] = useState("");
   const [type, setType] =
     useState<SourceType>("TELEGRAM_CHANNEL");
+
+  useEffect(() => {
+  const timer = window.setTimeout(() => {
+    setDebouncedSearch(search);
+  }, 400);
+
+  return () => {
+    window.clearTimeout(timer);
+  };
+}, [search]);
  
 
   const loadSources = async () => {
@@ -45,8 +56,8 @@ const [detailsLoading, setDetailsLoading] =
     //   );
     const params = new URLSearchParams();
 
-if (search.trim()) {
-  params.set("search", search.trim());
+if (debouncedSearch.trim()) {
+  params.set("search", debouncedSearch.trim());
 }
 
 if (typeFilter) {
@@ -76,10 +87,11 @@ const data = await adminRequest<SourcesResponse>(
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     loadSources();
-  }, [search, typeFilter, statusFilter]);
+  }, [debouncedSearch, typeFilter, statusFilter]);
 
   const handleAddSource = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,7 +301,7 @@ const handleViewDetails = async (source: Source) => {
           Add Source
         </button>
       </div>
-      //add the filter controls
+      {/* //add the filter controls */}
      <div className="source-filters">
   <input
     type="text"
