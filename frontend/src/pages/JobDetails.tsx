@@ -18,11 +18,11 @@ import {
   FileCheck2,
   CalendarDays,
   ShieldCheck,
-  Check,
 } from "lucide-react";
 import { getJobById, saveJob, unsaveJob } from "../services/jobs";
 import { isLocalJobSaved } from "../services/savedStorage";
 import { useAppLanguage } from "../services/language";
+import { ShareModal } from "../components/share/ShareModal";
 import type { Job, JobDetails as JobDetailsType } from "../types/job";
 
 interface JobDetailsProps {
@@ -35,14 +35,9 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSaved, setIsSaved] = useState(() => job.isSaved || isLocalJobSaved(job.id));
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const { t } = useAppLanguage();
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -73,56 +68,21 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
   const applicationEmail = jobDetails?.applyEmail;
   const applicationPhone = jobDetails?.applyPhone;
 
+  // Clean silent bookmark toggle: instantaneous visual flip with no intrusive popup toasts
   const handleToggleSave = async () => {
+    const nextSaved = !isSaved;
+    setIsSaved(nextSaved);
+
     try {
-      if (isSaved) {
+      if (!nextSaved) {
         await unsaveJob(job.id);
-        setIsSaved(false);
-        showToast(t.unsavedSuccess);
       } else {
         await saveJob(jobDetails || job);
-        setIsSaved(true);
-        showToast(t.savedSuccess);
       }
     } catch (err) {
       console.error("Failed to toggle save:", err);
-    }
-  };
-
-  const handleShare = async () => {
-    const shareUrl = sourceUrl || window.location.href;
-    const shareText = `Check out this verified vacancy on 4KILLO: ${job.title} at ${job.company}`;
-
-    // 1. Try Telegram WebApp openTelegramLink / sendData
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.openTelegramLink && sourceUrl) {
-      // In telegram, opening the link directly
-      window.open(sourceUrl, "_blank");
-      showToast(t.shareSuccess);
-      return;
-    }
-
-    // 2. Try Web Share API (mobile devices)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${job.title} - 4KILLO`,
-          text: shareText,
-          url: shareUrl,
-        });
-        showToast(t.shareSuccess);
-        return;
-      } catch (err) {
-        // User cancelled or share dismissed
-      }
-    }
-
-    // 3. Fallback: Copy to clipboard
-    try {
-      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      showToast(t.shareSuccess);
-    } catch {
-      showToast("Link: " + shareUrl);
+      // Revert on error
+      setIsSaved(!nextSaved);
     }
   };
 
@@ -175,14 +135,6 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-36 text-slate-900">
-      {/* Toast notification */}
-      {toastMessage && (
-        <div className="fixed top-5 left-5 right-5 z-50 flex items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-600 px-4 py-3 text-xs font-semibold text-white shadow-xl animate-in fade-in slide-in-from-top-4">
-          <Check size={16} className="shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* Top Navigation */}
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-5 py-3.5 backdrop-blur shadow-xs">
         <div className="flex items-center justify-between">
@@ -195,23 +147,29 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           </button>
 
           <div className="flex items-center gap-2">
+            {/* Silent instant bookmark toggle */}
             <button
               type="button"
               onClick={handleToggleSave}
-              className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${
+              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-150 active:scale-90 ${
                 isSaved
-                  ? "bg-emerald-50 text-emerald-600 shadow-xs"
-                  : "bg-slate-100 text-slate-500 hover:text-slate-700"
+                  ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/25"
+                  : "bg-slate-100 text-slate-400 hover:text-slate-600"
               }`}
-              title={isSaved ? "Saved to bookmarks" : "Save to bookmarks"}
+              title={isSaved ? "Saved" : "Save"}
             >
-              <Bookmark size={19} fill={isSaved ? "currentColor" : "none"} />
+              <Bookmark
+                size={19}
+                fill={isSaved ? "currentColor" : "none"}
+                className={isSaved ? "scale-105" : ""}
+              />
             </button>
 
+            {/* Share action button triggering glassomorphic modal */}
             <button
               type="button"
-              onClick={handleShare}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95"
+              onClick={() => setShowShareModal(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-90"
               title="Share job"
             >
               <Share2 size={18} />
@@ -323,7 +281,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
               <FileCheck2 size={18} className="text-blue-600" />
               <span>{t.roleSummary}</span>
             </div>
-            <div className="mt-3.5 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap select-text">
+            <div className="mt-3.5 text-sm leading-relaxed text-slate-700 whitespace-pre-line select-text">
               {jobDetails.description}
             </div>
           </section>
@@ -353,7 +311,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
               <Sparkles size={18} className="text-blue-600" />
               <span>{t.candidateRequirements}</span>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-slate-700 whitespace-pre-wrap select-text">
+            <p className="mt-3 text-xs leading-relaxed text-slate-700 whitespace-pre-line select-text">
               {jobDetails.requirements}
             </p>
           </section>
@@ -422,6 +380,15 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
           </div>
         </button>
       </footer>
+
+      {/* Glassmorphic Share Modal */}
+      {showShareModal && (
+        <ShareModal
+          job={jobDetails || job}
+          sourceUrl={sourceUrl}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
     </div>
   );
 }
