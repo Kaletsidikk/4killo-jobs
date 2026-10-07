@@ -7,10 +7,19 @@ import {
 } from "@tma.js/sdk";
 import { authenticateTelegram } from "../services/auth";
 
+export interface TelegramUser {
+  id?: number | string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+}
+
 export function useTelegram() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isTelegram, setIsTelegram] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<TelegramUser | null>(null);
 
   useEffect(() => {
     const initializeTelegram = async () => {
@@ -30,10 +39,14 @@ export function useTelegram() {
 
         // Get Telegram launch parameters from @tma.js/sdk or window.Telegram.WebApp fallback
         let initData: string | undefined;
+        let tgUser: TelegramUser | null = null;
 
         try {
           const launchParams = retrieveLaunchParams();
           initData = launchParams.initDataRaw as string | undefined;
+          if (launchParams.initData?.user) {
+            tgUser = launchParams.initData.user as TelegramUser;
+          }
         } catch {
           // Fallback to native window.Telegram.WebApp if retrieveLaunchParams throws
           const tg = (window as any).Telegram?.WebApp;
@@ -41,7 +54,21 @@ export function useTelegram() {
             tg.ready?.();
             tg.expand?.();
             initData = tg.initData;
+            if (tg.initDataUnsafe?.user) {
+              tgUser = tg.initDataUnsafe.user;
+            }
           }
+        }
+
+        if (!tgUser) {
+          const tg = (window as any).Telegram?.WebApp;
+          if (tg?.initDataUnsafe?.user) {
+            tgUser = tg.initDataUnsafe.user;
+          }
+        }
+
+        if (tgUser) {
+          setUser(tgUser);
         }
 
         if (!initData) {
@@ -61,7 +88,6 @@ export function useTelegram() {
         await authenticateTelegram(initData);
 
         setIsAuthenticated(true);
-
         console.log("Telegram authentication successful");
       } catch (error) {
         console.log(
@@ -79,5 +105,6 @@ export function useTelegram() {
     isAuthenticated,
     isTelegram,
     loading,
+    user,
   };
 }

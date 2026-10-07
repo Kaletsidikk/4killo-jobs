@@ -25,6 +25,8 @@ import {
   parseVoiceIntent,
 } from "../services/jobs";
 import { useAppLanguage } from "../services/language";
+import { useTelegram } from "../hooks/useTelegram";
+import logoImg from "../assets/logo.png";
 import type { Job } from "../types/job";
 interface HomeProps {
   onJobSelect: (job: Job) => void;
@@ -32,7 +34,7 @@ interface HomeProps {
 
 
 function Home({ onJobSelect }: HomeProps) {
-
+  const { user } = useTelegram();
   const { lang, toggleLanguage, t } = useAppLanguage();
   const { status, messages, sendText } = useVoxideVoice(ai);
   
@@ -358,12 +360,14 @@ const loadMoreJobs = async () => {
         <div className="flex items-center justify-between px-5 py-4">
 
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-lg text-white">
-              4
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img
+              src={logoImg}
+              alt="4KILLO"
+              className="h-9 w-9 rounded-xl object-contain shadow-xs"
+            />
 
-            <span className="text-lg font-bold tracking-tight">
+            <span className="text-lg font-bold tracking-tight text-slate-900">
               4KILLO
             </span>
           </div>
@@ -380,15 +384,21 @@ const loadMoreJobs = async () => {
               {lang === "EN" ? "አማ" : "EN"}
             </button>
 
+            {/* Telegram Profile Avatar */}
             <div className="relative">
-              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-sky-100">
-                <UserRound
-                  size={21}
-                  className="text-sky-600"
+              {user?.photo_url ? (
+                <img
+                  src={user.photo_url}
+                  alt={user.first_name || "Profile"}
+                  className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-100 shadow-xs"
                 />
-              </div>
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 text-xs font-bold text-white shadow-xs">
+                  {user?.first_name ? user.first_name.charAt(0).toUpperCase() : <UserRound size={18} />}
+                </div>
+              )}
 
-              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 ring-1 ring-emerald-500/20" />
             </div>
 
           </div>
@@ -533,34 +543,28 @@ const loadMoreJobs = async () => {
       )}
 
       {/* ================= CATEGORY FILTERS ================= */}
-      <section className="overflow-x-auto px-5 py-4">
-        <div className="flex min-w-max gap-2">
-{["All Jobs", ...categories].map((category) => {
-  const isAllJobs = category === "All Jobs";
+      <section className="relative px-5 py-3">
+        <div className="no-scrollbar smooth-scroll flex items-center gap-2 overflow-x-auto pb-1">
+          {["All Jobs", ...categories].map((category) => {
+            const isAllJobs = category === "All Jobs";
+            const categoryValue = isAllJobs ? "" : category;
+            const isSelected = selectedCategory === categoryValue;
 
-  const categoryValue = isAllJobs
-    ? ""
-    : category;
-
-  const isSelected =
-    selectedCategory === categoryValue;
-
-  return (
-    <button
-      key={category}
-      type="button"
-      onClick={() => { setSelectedCategory(categoryValue); setVoiceActive(false); }}
-      className={`rounded-lg border px-4 py-2 text-xs font-medium transition ${
-        isSelected
-          ? "border-emerald-600 bg-emerald-600 text-white"
-          : "border-slate-200 bg-white text-slate-600"
-      }`}
-    >
-      {category}
-    </button>
-  );
-})}
-
+            return (
+              <button
+                key={category}
+                type="button"
+                onClick={() => { setSelectedCategory(categoryValue); setVoiceActive(false); }}
+                className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold tracking-tight transition-all duration-150 active:scale-95 ${
+                  isSelected
+                    ? "bg-slate-900 text-white shadow-sm shadow-slate-900/20"
+                    : "border border-slate-200/90 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                {category}
+              </button>
+            );
+          })}
         </div>
       </section>
 
