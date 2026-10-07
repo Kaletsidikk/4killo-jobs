@@ -9,13 +9,15 @@ import {
   Clock3,
   Building2,
   GraduationCap,
-  ListChecks,
-  FileText,
-  MessageSquareQuote,
+  Sparkles,
   Share2,
   Send,
   Phone,
   Mail,
+  Layers,
+  FileCheck2,
+  CalendarDays,
+  ShieldCheck,
 } from "lucide-react";
 import { getJobById, saveJob, unsaveJob } from "../services/jobs";
 import type { Job, JobDetails as JobDetailsType } from "../types/job";
@@ -30,7 +32,6 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSaved, setIsSaved] = useState(job.isSaved);
-  const [activeTab, setActiveTab] = useState<"overview" | "raw">("overview");
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -56,7 +57,6 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
   const details = jobDetails ?? job;
   const primarySource = details.sources?.[0];
   const sourceUrl = primarySource?.postUrl;
-  const rawAnnouncement = primarySource?.rawText;
 
   const applicationUrl = jobDetails?.applyUrl;
   const applicationEmail = jobDetails?.applyEmail;
@@ -96,21 +96,21 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
 
   const getApplyButton = () => {
     if (applicationUrl) {
-      return { label: "Apply Online", icon: <ExternalLink size={18} /> };
+      return { label: "Apply Online", sub: "Official Link", icon: <ExternalLink size={18} /> };
     }
     if (applicationEmail) {
-      return { label: `Email CV (${applicationEmail})`, icon: <Mail size={18} /> };
+      return { label: "Send Email Application", sub: applicationEmail, icon: <Mail size={18} /> };
     }
     if (applicationPhone) {
-      return { label: `Call Employer (${applicationPhone})`, icon: <Phone size={18} /> };
+      return { label: "Call Employer", sub: applicationPhone, icon: <Phone size={18} /> };
     }
     if (sourceUrl) {
-      return { label: "Apply via Telegram Channel", icon: <Send size={18} /> };
+      return { label: "Apply on Telegram", sub: primarySource?.sourceName || "Direct Channel", icon: <Send size={18} /> };
     }
-    return { label: "View Telegram Post", icon: <ExternalLink size={18} /> };
+    return { label: "View Telegram Post", sub: "Original Posting", icon: <ExternalLink size={18} /> };
   };
 
-  // Convert comma or newline separated requirements into clear bullet points
+  // Convert comma or newline separated requirements into clear, distinct badge pills
   const parseRequirements = (reqStr?: string | null): string[] => {
     if (!reqStr || reqStr.trim() === "" || reqStr.toLowerCase() === "not specified") {
       return [];
@@ -124,9 +124,9 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
   const requirementList = parseRequirements(jobDetails?.requirements);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32 text-slate-900">
+    <div className="min-h-screen bg-slate-50 pb-36 text-slate-900">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-5 py-3.5 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-5 py-3.5 backdrop-blur shadow-xs">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -154,7 +154,7 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
                 type="button"
                 onClick={() => window.open(sourceUrl, "_blank")}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200"
-                title="View original Telegram posting"
+                title="Share or View Original Post"
               >
                 <Share2 size={18} />
               </button>
@@ -163,241 +163,206 @@ function JobDetails({ job, onBack }: JobDetailsProps) {
         </div>
       </header>
 
-      {/* Main Job Banner */}
+      {/* Hero Header Card */}
       <section className="border-b border-slate-200 bg-white px-5 pb-6 pt-5">
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md">
-            <Building2 size={28} />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
+            <Building2 size={32} />
           </div>
 
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold leading-tight text-slate-950">
+            <h1 className="text-xl font-bold leading-snug text-slate-950">
               {job.title}
             </h1>
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-semibold text-slate-700">{job.company}</span>
-              {job.sources.length > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-700">
-                  <CheckCircle size={12} className="text-sky-500" />
-                  Verified Channel
-                </span>
-              )}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-sm text-slate-700">{job.company}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                <CheckCircle size={12} className="text-blue-600" />
+                Verified Listing
+              </span>
+            </div>
+
+            <div className="mt-2.5 flex items-center gap-2 text-xs text-slate-500">
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
+                {job.category}
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1 text-slate-600">
+                <MapPin size={12} className="text-slate-400" />
+                {job.location}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Structured Metric Grid */}
-        <div className="mt-5 grid grid-cols-2 gap-2.5">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <MapPin size={14} />
-              <span>Location</span>
+        {/* 4-Item Key Parameters Grid */}
+        <div className="mt-6 grid grid-cols-2 gap-2.5">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <BriefcaseBusiness size={14} className="text-slate-500" />
+              <span>Employment Type</span>
             </div>
-            <p className="mt-1 text-sm font-semibold text-slate-900 truncate">
-              {job.location || "Addis Ababa"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <BriefcaseBusiness size={14} />
-              <span>Job Type</span>
-            </div>
-            <p className="mt-1 text-sm font-semibold text-slate-900 truncate">
+            <p className="mt-1 text-sm font-bold text-slate-900">
               {job.employmentType || "Full-time"}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <Clock3 size={14} />
-              <span>Deadline</span>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <Layers size={14} className="text-slate-500" />
+              <span>Experience Tier</span>
             </div>
-            <p className="mt-1 text-sm font-semibold text-slate-900 truncate">
-              {job.deadline
-                ? new Date(job.deadline).toLocaleDateString()
-                : "Open until filled"}
+            <p className="mt-1 text-sm font-bold text-slate-900">
+              {job.experienceLevel && job.experienceLevel !== "NOT_SPECIFIED"
+                ? job.experienceLevel.charAt(0) + job.experienceLevel.slice(1).toLowerCase()
+                : "Open to all levels"}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-            <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-              <span>Salary</span>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <CalendarDays size={14} className="text-slate-500" />
+              <span>Deadline</span>
             </div>
-            <p className="mt-1 text-sm font-bold text-emerald-700 truncate">
+            <p className="mt-1 text-sm font-bold text-slate-900">
+              {job.deadline
+                ? new Date(job.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                : "Not specified"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
+              <Clock3 size={14} />
+              <span>Offered Compensation</span>
+            </div>
+            <p className="mt-1 text-sm font-bold text-emerald-800">
               {job.salary || "Negotiable"}
             </p>
           </div>
         </div>
-
-        {/* View Mode Tabs (Structured vs Untouched Telegram Post) */}
-        <div className="mt-6 flex rounded-xl bg-slate-100 p-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab("overview")}
-            className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
-              activeTab === "overview"
-                ? "bg-white text-blue-700 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Structured Overview
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("raw")}
-            className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
-              activeTab === "raw"
-                ? "bg-white text-blue-700 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Untouched Scraped Post
-          </button>
-        </div>
       </section>
 
-      {/* TAB 1: Structured Overview */}
-      {activeTab === "overview" && (
-        <main className="space-y-4 px-5 pt-4">
-          {loading && (
+      {/* Main Body Content Sections */}
+      <main className="space-y-4 px-5 pt-4">
+        {loading && (
+          <div className="space-y-3">
             <div className="h-28 animate-pulse rounded-2xl bg-slate-200/70" />
-          )}
+            <div className="h-28 animate-pulse rounded-2xl bg-slate-200/70" />
+          </div>
+        )}
 
-          {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs text-red-600">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-600">
+            {error}
+          </div>
+        )}
 
-          {/* Detailed Job Summary */}
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-              <FileText size={17} className="text-blue-600" />
-              <span>Role Summary & Responsibilities</span>
+        {/* 1. Job Description & Responsibilities */}
+        {jobDetails?.description && (
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
+              <FileCheck2 size={18} className="text-blue-600" />
+              <span>About the Role</span>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-slate-700 whitespace-pre-line">
-              {jobDetails?.description || "No specific summary provided for this vacancy."}
+            <div className="mt-3.5 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap select-text">
+              {jobDetails.description}
+            </div>
+          </section>
+        )}
+
+        {/* 2. Key Qualifications & Requirements */}
+        {requirementList.length > 0 ? (
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
+              <Sparkles size={18} className="text-blue-600" />
+              <span>Candidate Requirements</span>
+            </div>
+            <ul className="mt-3.5 space-y-2.5">
+              {requirementList.map((req, idx) => (
+                <li key={idx} className="flex items-start gap-3 text-xs leading-relaxed text-slate-700">
+                  <div className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold text-[10px]">
+                    ✓
+                  </div>
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : jobDetails?.requirements && (
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
+              <Sparkles size={18} className="text-blue-600" />
+              <span>Requirements</span>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-slate-700 whitespace-pre-wrap select-text">
+              {jobDetails.requirements}
             </p>
           </section>
+        )}
 
-          {/* Key Qualifications & Requirements */}
-          {requirementList.length > 0 ? (
-            <section className="rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                <ListChecks size={17} className="text-blue-600" />
-                <span>Key Requirements</span>
-              </div>
-              <ul className="mt-3 space-y-2.5">
-                {requirementList.map((req, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-700">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />
-                    <span>{req}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : jobDetails?.requirements && (
-            <section className="rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                <ListChecks size={17} className="text-blue-600" />
-                <span>Requirements</span>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-slate-700 whitespace-pre-line">
-                {jobDetails.requirements}
-              </p>
-            </section>
-          )}
+        {/* 3. Education / Academic Background */}
+        {jobDetails?.education && jobDetails.education.toLowerCase() !== "not specified" && (
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 text-sm font-bold text-slate-950">
+              <GraduationCap size={18} className="text-blue-600" />
+              <span>Education & Degree</span>
+            </div>
+            <p className="mt-3 text-xs font-semibold text-slate-800">
+              {jobDetails.education}
+            </p>
+          </section>
+        )}
 
-          {/* Education Qualification */}
-          {jobDetails?.education && jobDetails.education.toLowerCase() !== "not specified" && (
-            <section className="rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                <GraduationCap size={17} className="text-blue-600" />
-                <span>Education & Qualifications</span>
-              </div>
-              <p className="mt-2 text-xs font-medium text-slate-700">
-                {jobDetails.education}
-              </p>
-            </section>
-          )}
-
-          {/* Channel Attribution & Transparency Check */}
-          {primarySource && (
-            <section className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-              <div className="flex items-start justify-between">
+        {/* 4. Verified Source Card */}
+        {primarySource && (
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+                  <ShieldCheck size={20} />
+                </div>
                 <div>
-                  <h3 className="text-xs font-bold text-emerald-900">
-                    Verified Job Source: {primarySource.sourceName}
+                  <h3 className="text-xs font-bold text-slate-900">
+                    Source: {primarySource.sourceName}
                   </h3>
-                  <p className="mt-1 text-[11px] text-emerald-700">
-                    Posted on: {new Date(primarySource.postedAt).toLocaleDateString()}
+                  <p className="text-[11px] text-slate-400">
+                    Published on {new Date(primarySource.postedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
-                {sourceUrl && (
-                  <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs font-semibold text-emerald-800 underline underline-offset-2"
-                  >
-                    Open Post
-                    <ExternalLink size={12} />
-                  </a>
-                )}
               </div>
-            </section>
-          )}
-        </main>
-      )}
 
-      {/* TAB 2: Untouched Scraped Announcement (Direct Channel Copy) */}
-      {activeTab === "raw" && (
-        <main className="px-5 pt-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4.5 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <MessageSquareQuote size={18} className="text-blue-600" />
-                <h3 className="text-sm font-bold text-slate-900">Telegram Channel Broadcast</h3>
-              </div>
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
-                {primarySource?.sourceName || "Raw Post"}
-              </span>
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
+                >
+                  <span>Telegram</span>
+                  <ExternalLink size={12} />
+                </a>
+              )}
             </div>
+          </section>
+        )}
+      </main>
 
-            <p className="mt-2 text-xs text-slate-400">
-              Unmodified message captured directly by the scraper:
-            </p>
-
-            <div className="mt-3 overflow-x-auto rounded-xl bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 whitespace-pre-wrap select-text border border-slate-200/60 font-mono">
-              {rawAnnouncement || jobDetails?.description || "No raw text available."}
-            </div>
-
-            {sourceUrl && (
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 py-2.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
-              >
-                <span>View Live Telegram Message</span>
-                <ExternalLink size={13} />
-              </a>
-            )}
-          </div>
-        </main>
-      )}
-
-      {/* Sticky Bottom Apply Action Bar */}
-      <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200/90 bg-white/95 px-5 py-3.5 backdrop-blur shadow-lg">
+      {/* Sticky Bottom Direct CTA Bar */}
+      <footer className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 px-5 py-3.5 backdrop-blur shadow-lg">
         <button
           type="button"
           onClick={handleApply}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.99] hover:bg-blue-700"
+          className="flex w-full items-center justify-between rounded-2xl bg-blue-600 px-5 py-3.5 text-white shadow-md shadow-blue-600/25 transition active:scale-[0.99] hover:bg-blue-700"
         >
-          <span>{getApplyButton().label}</span>
-          {getApplyButton().icon}
+          <div className="text-left">
+            <p className="text-sm font-bold leading-tight">{getApplyButton().label}</p>
+            <p className="text-[11px] font-medium text-blue-100">{getApplyButton().sub}</p>
+          </div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
+            {getApplyButton().icon}
+          </div>
         </button>
       </footer>
     </div>
