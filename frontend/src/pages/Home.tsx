@@ -16,11 +16,22 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { 
-  getJobs, 
+// import { 
+//   getJobs, 
+//   getJobCategories,
+//   saveJob,
+//   unsaveJob, } from "../services/jobs";
+
+import {
+  getJobs,
   getJobCategories,
-  saveJob,
-  unsaveJob, } from "../services/jobs";
+} from "../services/jobs";
+
+import {
+  saveJobLocally,
+  removeLocalSavedJob,
+  isLocalJobSaved,
+} from "../services/localSavedJobs";
 import type { Job } from "../types/job";
 interface HomeProps {
   onJobSelect: (job: Job) => void;
@@ -137,23 +148,46 @@ console.log("Voxide voice messages:", messages);
 });
   console.log("Voxide searchJobs capability registered");
 
-  const handleToggleSave = async (job: Job) => {
+//   const handleToggleSave = async (job: Job) => {
+//   try {
+//     if (job.isSaved) {
+//       await unsaveJob(job.id);
+//     } else {
+//       await saveJob(job.id);
+//     }
+
+//     setJobs((currentJobs) =>
+//       currentJobs.map((currentJob) =>
+//         currentJob.id === job.id
+//           ? { ...currentJob, isSaved: !currentJob.isSaved }
+//           : currentJob
+//       )
+//     );
+//   } catch (err) {
+//     console.error("Failed to update saved job:", err);
+//   }
+// };
+
+const handleToggleSave = (job: Job) => {
   try {
-    if (job.isSaved) {
-      await unsaveJob(job.id);
+    if (isLocalJobSaved(job.id)) {
+      removeLocalSavedJob(job.id);
     } else {
-      await saveJob(job.id);
+      saveJobLocally(job);
     }
 
     setJobs((currentJobs) =>
       currentJobs.map((currentJob) =>
         currentJob.id === job.id
-          ? { ...currentJob, isSaved: !currentJob.isSaved }
+          ? {
+              ...currentJob,
+              isSaved: !currentJob.isSaved,
+            }
           : currentJob
       )
     );
   } catch (err) {
-    console.error("Failed to update saved job:", err);
+    console.error("Failed to update saved job locally:", err);
   }
 };
 

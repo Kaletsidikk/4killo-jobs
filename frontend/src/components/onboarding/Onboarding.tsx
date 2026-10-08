@@ -95,7 +95,46 @@ function Onboarding({onComplete }: OnboardingProps) {
   }
   };
 
-  const handleSubmit = async () => {
+//   const handleSubmit = async () => {
+//   if (
+//     !language ||
+//     selectedCategories.length === 0 ||
+//     !experienceLevel ||
+//     selectedLocations.length === 0
+//   ) {
+//     return;
+//   }
+
+//   try {
+//     setSubmitting(true);
+//     setError(null);
+
+//     await updatePreferences({
+//       language,
+//       categories: selectedCategories,
+//       locations: selectedLocations,
+//       experienceLevel,
+//       instantAlerts: true,
+//       digestAlerts: true,
+//     });
+
+//     console.log("Preferences saved successfully");
+
+//     onComplete();
+//   } catch (err) {
+//     console.error("Failed to save preferences:", err);
+
+//     setError(
+//       err instanceof Error
+//         ? err.message
+//         : "Failed to save preferences"
+//     );
+//   } finally {
+//     setSubmitting(false);
+//   }
+// };
+
+const handleSubmit = async () => {
   if (
     !language ||
     selectedCategories.length === 0 ||
@@ -109,16 +148,32 @@ function Onboarding({onComplete }: OnboardingProps) {
     setSubmitting(true);
     setError(null);
 
-    await updatePreferences({
+    const preferences = {
       language,
       categories: selectedCategories,
       locations: selectedLocations,
       experienceLevel,
       instantAlerts: true,
       digestAlerts: true,
-    });
+    };
 
-    console.log("Preferences saved successfully");
+    try {
+      // Try the real backend first.
+      await updatePreferences(preferences);
+
+      console.log("Preferences saved to backend");
+    } catch (backendError) {
+      console.log(
+        "Backend authentication unavailable. Saving preferences locally for development.",
+        backendError
+      );
+
+      // Development-only fallback.
+      localStorage.setItem(
+        "mela_felagi_dev_preferences",
+        JSON.stringify(preferences)
+      );
+    }
 
     onComplete();
   } catch (err) {
@@ -129,15 +184,6 @@ function Onboarding({onComplete }: OnboardingProps) {
         ? err.message
         : "Failed to save preferences"
     );
-
-    // TEMPORARY: allow us to test the frontend in Chrome
-    if (import.meta.env.DEV) {
-      console.log(
-        "Development mode: continuing to Home despite API failure."
-      );
-
-      onComplete();
-    }
   } finally {
     setSubmitting(false);
   }

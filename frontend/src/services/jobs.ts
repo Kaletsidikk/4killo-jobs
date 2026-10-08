@@ -1,5 +1,9 @@
 import { apiRequest } from "./api";
-import type { JobsResponse, JobDetails } from "../types/job";
+import type {
+  JobsResponse,
+  JobDetails,
+  ForYouResponse,
+} from "../types/job";
 
 export async function getJobs(
   
@@ -41,6 +45,15 @@ export async function getJobs(
   const query = searchParams.toString();
 
   return apiRequest(`/jobs?${query}`);
+}
+
+export async function getForYouJobs(
+  page = 1,
+  limit = 10
+): Promise<ForYouResponse> {
+  return apiRequest(
+    `/jobs/for-you?page=${page}&limit=${limit}`
+  );
 }
 
 export async function getJobById(
