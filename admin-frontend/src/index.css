@@ -23,10 +23,14 @@ input {
 
 .sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
   background: #111827;
   color: white;
   padding: 24px 16px;
+  overflow-y: auto;
 }
 
 .sidebar-logo {
@@ -74,8 +78,9 @@ input {
 /* Main */
 
 .admin-main {
-  flex: 1;
+  margin-left: 240px;
   min-width: 0;
+  width: calc(100% - 240px);
 }
 
 .admin-header {
@@ -93,6 +98,129 @@ input {
   font-size: 22px;
 }
 
+/* =========================
+   Login Page
+========================= */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #f5f6f8;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 36px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.login-card h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.login-subtitle {
+  margin: 8px 0 28px;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.login-card .form-group {
+  margin-bottom: 18px;
+}
+
+.login-card label {
+  display: block;
+  margin-bottom: 7px;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-card input::placeholder {
+  color: #9ca3af;
+}
+
+.login-card input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.login-card .error-message {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.login-card button[type="submit"]:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.login-card button[type="submit"]:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.login-card button[type="submit"]:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .login-page {
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 28px 22px;
+  }
+
+  .login-card h1 {
+    font-size: 24px;
+  }
+}
 .logout-button {
   border: 1px solid #d1d5db;
   background: white;
@@ -261,6 +389,7 @@ input {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 24px;
+  margin-bottom: 15px;
 }
 
 .panel-header {
@@ -656,7 +785,19 @@ input {
 .sources-table tbody tr:last-child td {
   border-bottom: none;
 }
+.sources-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
+@media (max-width: 700px) {
+  .sources-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
 .status-badge {
   display: inline-block;
   padding: 4px 8px;
@@ -1186,6 +1327,12 @@ input {
   border-color: #2563eb;
 }
 
+.users-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 @media (max-width: 768px) {
   .users-filters {
     flex-direction: column;
@@ -1194,6 +1341,14 @@ input {
 
   .users-filters input {
     width: auto;
+  }
+}
+
+@media (max-width: 800px) {
+  .users-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 
@@ -1343,5 +1498,57 @@ input {
 
   .saved-job-meta {
     align-items: flex-start;
+  }
+}
+
+
+.scraped-total {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scraped-total span {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.scraped-total strong {
+  color: #111827;
+  font-size: 18px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metrics-grid > div {
+  padding: 14px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.metrics-grid strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #374151;
+  font-size: 13px;
+}
+
+.metrics-grid p {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+@media (max-width: 650px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
   }
 }

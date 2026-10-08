@@ -11,6 +11,7 @@ import type {
 const Sources = () => {
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -85,6 +86,7 @@ const data = await adminRequest<SourcesResponse>(
       );
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
   
@@ -277,10 +279,21 @@ const handleViewDetails = async (source: Source) => {
   }
 };
 
-  if (loading) {
-    return <p>Loading sources...</p>;
-  }
+//error handling
+if (error && initialLoading) {
+  return (
+    <div className="dashboard-state">
+      <p>{error}</p>
 
+      <button
+        className="primary-button"
+        onClick={loadSources}
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
   return (
     <div className="sources-page">
       <div className="page-header">
@@ -290,7 +303,14 @@ const handleViewDetails = async (source: Source) => {
             Manage the sources used to collect job postings.
           </p>
         </div>
-
+         <div className="sources-actions">
+         <button
+            className="secondary-button"
+            onClick={loadSources}
+            disabled={loading}
+          >
+            {loading ? "Refreshing..." : "↻ Refresh"}
+          </button>
         <button
           className="primary-button"
           onClick={() => {
@@ -300,6 +320,7 @@ const handleViewDetails = async (source: Source) => {
         >
           Add Source
         </button>
+      </div>
       </div>
       {/* //add the filter controls */}
      <div className="source-filters">
@@ -540,9 +561,20 @@ const handleViewDetails = async (source: Source) => {
 )}
 
       <div className="sources-table-container">
-        {sources.length === 0 ? (
-          <p>No sources found.</p>
-        ) : (
+            {initialLoading ? (
+              <div className="dashboard-state">
+                <div className="loading-spinner"></div>
+                <p>Loading sources...</p>
+              </div>
+            ) : sources.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">⌕</div>
+                <h3>No sources found</h3>
+                <p>
+                  No sources match your current search or filter.
+                </p>
+              </div>
+            ) : (
           <table className="sources-table">
             <thead>
               <tr>

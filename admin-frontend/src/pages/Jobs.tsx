@@ -9,6 +9,7 @@ import type {
 const Jobs = () => {
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -67,6 +68,7 @@ const limit = 20;
     );
   } finally {
     setLoading(false);
+    setInitialLoading(false);
   }
 };
 
@@ -229,9 +231,7 @@ useEffect(() => {
   experienceFilter,
 ]);
 
-  if (loading) {
-    return <p>Loading jobs...</p>;
-  }
+  
 
   if (error) {
     return (
@@ -744,16 +744,20 @@ useEffect(() => {
             </span>
             </div>
 
-      {jobs.length === 0 ? (
-        <div className="empty-state">
-          <strong>No jobs found</strong>
-          <p>
-            There are currently no jobs available.
-          </p>
-        </div>
-      ) : (
-        
-        <div className="sources-table-container">
+      {initialLoading ? (
+  <div className="dashboard-state">
+    <div className="loading-spinner"></div>
+    <p>Loading jobs...</p>
+  </div>
+) : jobs.length === 0 ? (
+  <div className="empty-state">
+    <strong>No jobs found</strong>
+    <p>
+      There are currently no jobs available.
+    </p>
+  </div>
+) : (
+  <div className="sources-table-container">
           <table className="sources-table">
             <thead>
               <tr>

@@ -51,6 +51,7 @@ interface AdminUsersResponse {
 function Users() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -93,6 +94,7 @@ const limit = 20;
       );
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
   const handleViewDetails = async (user: AdminUser) => {
@@ -130,13 +132,20 @@ const limit = 20;
   return () => window.clearTimeout(timer);
 }, [search]);
 
-  if (loading) {
-    return <div>Loading users...</div>;
-  }
+  if (error && initialLoading) {
+  return (
+    <div className="dashboard-state">
+      <p>{error}</p>
 
-  if (error) {
-    return <div>{error}</div>;
-  }
+      <button
+        className="primary-button"
+        onClick={loadUsers}
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
 
   return (
     <div className="users-page">
@@ -146,7 +155,7 @@ const limit = 20;
     <h2>Users</h2>
     <span>Total Users: {totalUsers}</span>
   </div>
-
+<div className="users-actions">
   <div className="users-filters">
     <input
       type="text"
@@ -167,9 +176,21 @@ const limit = 20;
       <option value="AM">Amharic</option>
     </select>
   </div>
+  <button
+      className="primary-button"
+      onClick={loadUsers}
+      disabled={loading}
+    >
+       {loading ? "Refreshing..." : "↻ Refresh"}
+    </button>
 </div>
-
-{users.length === 0 ? (
+</div>
+{initialLoading ? (
+  <div className="dashboard-state">
+    <div className="loading-spinner"></div>
+    <p>Loading users...</p>
+  </div>
+) : users.length === 0 ? (
   <p>No users found.</p>
 ) : (
   <div className="users-table-container">

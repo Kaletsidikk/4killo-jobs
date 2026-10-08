@@ -37,8 +37,6 @@ function App() {
     jobs: "Jobs",
     users: "Users",
     sources: "Sources",
-    //scraping: "Scraping",
-    settings: "Settings",
   };
 
   return (
@@ -63,14 +61,8 @@ function App() {
 
          {activePage === "sources" && <Sources />}
 
-          {/* {activePage === "users" && (
-            <h2>Scraping page coming next</h2>
-          )} */}
           {activePage === "users" && <Users />}
 
-          {activePage === "settings" && (
-            <h2>Settings page coming next</h2>
-          )}
         </main>
       </div>
     </div>

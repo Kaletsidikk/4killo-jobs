@@ -243,7 +243,12 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
               />
             </div>
           </div>
-
+        <div className="scraped-total">
+          <span>Total Jobs Scraped</span>
+          <strong>
+            {metrics.summary.sources.totalScrapedAllTime}
+          </strong>
+        </div>
         </section>
 
         {/* Quick Actions */}
@@ -330,7 +335,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
       </div>
     </div>
 
-    <div className="user-details-grid">
+    <div className="metrics-grid">
 
       <div>
         <strong>Active Jobs</strong>
@@ -369,7 +374,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
       </div>
     </div>
 
-    <div className="user-details-grid">
+    <div className="metrics-grid">
 
       <div>
         <strong>Total Users</strong>

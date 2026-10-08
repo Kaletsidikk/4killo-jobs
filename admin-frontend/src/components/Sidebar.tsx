@@ -9,8 +9,6 @@ const Sidebar = ({ activePage, onNavigate }: SidebarProps) => {
     { id: "jobs", label: "Jobs" },
     { id: "users", label: "Users" },
     { id: "sources", label: "Sources" },
-    //{ id: "scraping", label: "Scraping" },
-    { id: "settings", label: "Settings" },
   ];
 
   return (
