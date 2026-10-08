@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { adminRequest } from "../services/adminApi";
 import type { SourcesResponse } from "../types/source";
+import type { AdminMetrics } from "../types/metrics";
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
@@ -9,37 +10,39 @@ interface DashboardProps {
 
 const Dashboard = ({ onNavigate }: DashboardProps) => {
   const [data, setData] = useState<SourcesResponse | null>(null);
+  const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const loadDashboard = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  try {
+    setLoading(true);
+    setError("");
 
-      const result = await adminRequest<SourcesResponse>(
-        "/api/admin/sources"
-      );
+    const [sourcesResult, metricsResult] = await Promise.all([
+      adminRequest<SourcesResponse>("/api/admin/sources"),
+      adminRequest<AdminMetrics>("/api/admin/metrics"),
+    ]);
 
-      setData(result);
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load dashboard"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    setData(sourcesResult);
+    setMetrics(metricsResult);
+    setLastUpdated(new Date());
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Failed to load dashboard"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  if (loading && !data) {
+ if (loading && (!data || !metrics)) {
     return (
       <div className="dashboard-state">
         <div className="loading-spinner"></div>
@@ -48,7 +51,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
     );
   }
 
-  if (error && !data) {
+ if (error && (!data || !metrics)) {
     return (
       <div className="dashboard-state">
         <p className="error-message">{error}</p>
@@ -63,7 +66,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
     );
   }
 
-  if (!data) {
+  if (!data || !metrics) {
     return (
       <div className="dashboard-state">
         <p>No dashboard data available.</p>
@@ -71,16 +74,16 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
     );
   }
 
-  const totalSources = data.stats.totalSources || 1;
+  const totalSources = metrics.summary.sources.total || 1;
 
   const activePercentage =
-    (data.stats.activeSources / totalSources) * 100;
+  (metrics.summary.sources.active / totalSources) * 100;
 
   const pausedPercentage =
-    (data.stats.pausedSources / totalSources) * 100;
+  (metrics.summary.sources.paused / totalSources) * 100;
 
   const errorPercentage =
-    (data.stats.errorSources / totalSources) * 100;
+  (metrics.summary.sources.error / totalSources) * 100;
   const overviewSources = [...data.sources]
   .sort((a, b) => {
     const priority: Record<string, number> = {
@@ -139,40 +142,49 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
 
       {/* Statistics */}
 
-      <div className="stats-grid">
+     <div className="stats-grid">
 
-        <div className="stat-card">
-          <span>Total Jobs Linked</span>
-          <strong>{data.stats.totalJobsLinked}</strong>
-          <small>Jobs connected to sources</small>
-        </div>
+  <div className="stat-card">
+    <span>Total Jobs</span>
+    <strong>{metrics.summary.jobs.total}</strong>
+    <small>
+      {metrics.summary.jobs.active} active jobs
+    </small>
+  </div>
 
-        <div className="stat-card">
-          <span>Total Sources</span>
-          <strong>{data.stats.totalSources}</strong>
-          <small>Configured job sources</small>
-        </div>
+  <div className="stat-card">
+    <span>Jobs Added (7d)</span>
+    <strong>{metrics.summary.jobs.addedLast7d}</strong>
+    <small>
+      {metrics.summary.jobs.addedLast24h} added in the last 24 hours
+    </small>
+  </div>
 
-        <div className="stat-card">
-          <span>Active Sources</span>
-          <strong>{data.stats.activeSources}</strong>
-          <small>Currently active</small>
-        </div>
+  <div className="stat-card">
+    <span>Total Users</span>
+    <strong>{metrics.summary.users.total}</strong>
+    <small>
+      {metrics.summary.users.newLast7d} new users this week
+    </small>
+  </div>
 
-        <div className="stat-card">
-          <span>Paused Sources</span>
-          <strong>{data.stats.pausedSources}</strong>
-          <small>Currently paused</small>
-        </div>
+  <div className="stat-card">
+    <span>Saved Jobs</span>
+    <strong>{metrics.summary.engagement.totalBookmarks}</strong>
+    <small>
+      Total bookmarked jobs
+    </small>
+  </div>
 
-        <div className="stat-card">
-          <span>Source Errors</span>
-          <strong>{data.stats.errorSources}</strong>
-          <small>Sources requiring attention</small>
-        </div>
+  <div className="stat-card">
+    <span>Total Sources</span>
+    <strong>{metrics.summary.sources.total}</strong>
+    <small>
+      {metrics.summary.sources.active} active sources
+    </small>
+  </div>
 
-      </div>
-
+</div>
       {/* Dashboard Sections */}
 
       <div className="dashboard-sections">
@@ -193,7 +205,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
           <div className="health-item">
             <div className="health-label">
               <span>Active</span>
-              <strong>{data.stats.activeSources}</strong>
+              <strong>{metrics.summary.sources.active}</strong>
             </div>
 
             <div className="health-bar">
@@ -207,7 +219,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
           <div className="health-item">
             <div className="health-label">
               <span>Paused</span>
-              <strong>{data.stats.pausedSources}</strong>
+              <strong>{metrics.summary.sources.paused}</strong>
             </div>
 
             <div className="health-bar">
@@ -221,7 +233,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
           <div className="health-item">
             <div className="health-label">
               <span>Errors</span>
-              <strong>{data.stats.errorSources}</strong>
+              <strong>{metrics.summary.sources.error}</strong>
             </div>
 
             <div className="health-bar">
@@ -301,6 +313,202 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
         </section>
 
       </div>
+      {/* Platform Overview */}
+
+<div className="dashboard-sections">
+
+  {/* Job Overview */}
+
+  <section className="dashboard-panel">
+
+    <div className="panel-header">
+      <div>
+        <h3>Job Overview</h3>
+        <p>
+          Current job activity across the platform.
+        </p>
+      </div>
+    </div>
+
+    <div className="user-details-grid">
+
+      <div>
+        <strong>Active Jobs</strong>
+        <p>{metrics.summary.jobs.active}</p>
+      </div>
+
+      <div>
+        <strong>Inactive Jobs</strong>
+        <p>{metrics.summary.jobs.inactive}</p>
+      </div>
+
+      <div>
+        <strong>Added Last 24 Hours</strong>
+        <p>{metrics.summary.jobs.addedLast24h}</p>
+      </div>
+
+      <div>
+        <strong>Added Last 7 Days</strong>
+        <p>{metrics.summary.jobs.addedLast7d}</p>
+      </div>
+
+    </div>
+
+  </section>
+
+  {/* User Engagement */}
+
+  <section className="dashboard-panel">
+
+    <div className="panel-header">
+      <div>
+        <h3>User Engagement</h3>
+        <p>
+          User activity and notification preferences.
+        </p>
+      </div>
+    </div>
+
+    <div className="user-details-grid">
+
+      <div>
+        <strong>Total Users</strong>
+        <p>{metrics.summary.users.total}</p>
+      </div>
+
+      <div>
+        <strong>New Users (7d)</strong>
+        <p>{metrics.summary.users.newLast7d}</p>
+      </div>
+
+      <div>
+        <strong>Users With Alerts</strong>
+        <p>{metrics.summary.users.withAlertsEnabled}</p>
+      </div>
+
+      <div>
+        <strong>Saved Jobs</strong>
+        <p>{metrics.summary.engagement.totalBookmarks}</p>
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+{/* Job Breakdowns */}
+
+<div className="dashboard-sections">
+
+  {/* Job Categories */}
+
+  <section className="dashboard-panel">
+
+    <div className="panel-header">
+      <div>
+        <h3>Top Job Categories</h3>
+        <p>
+          Categories with the most collected jobs.
+        </p>
+      </div>
+    </div>
+
+    {metrics.breakdowns.categories.length === 0 ? (
+      <p className="empty-text">
+        No category data available.
+      </p>
+    ) : (
+      <div className="breakdown-list">
+        {metrics.breakdowns.categories.map((item) => (
+          <div
+            className="breakdown-item"
+            key={item.category ?? "unknown"}
+          >
+            <span>
+              {item.category || "Unknown"}
+            </span>
+
+            <strong>{item.count}</strong>
+          </div>
+        ))}
+      </div>
+    )}
+
+  </section>
+
+  {/* Job Locations */}
+
+  <section className="dashboard-panel">
+
+    <div className="panel-header">
+      <div>
+        <h3>Top Job Locations</h3>
+        <p>
+          Locations with the most collected jobs.
+        </p>
+      </div>
+    </div>
+
+    {metrics.breakdowns.locations.length === 0 ? (
+      <p className="empty-text">
+        No location data available.
+      </p>
+    ) : (
+      <div className="breakdown-list">
+        {metrics.breakdowns.locations.map((item) => (
+          <div
+            className="breakdown-item"
+            key={item.location ?? "unknown"}
+          >
+            <span>
+              {item.location || "Unknown"}
+            </span>
+
+            <strong>{item.count}</strong>
+          </div>
+        ))}
+      </div>
+    )}
+
+  </section>
+
+</div>
+{/* Source Types */}
+
+<section className="dashboard-panel source-types-panel">
+
+  <div className="panel-header">
+    <div>
+      <h3>Source Types</h3>
+      <p>
+        Distribution of configured job sources by type.
+      </p>
+    </div>
+  </div>
+
+  {metrics.breakdowns.sourceTypes.length === 0 ? (
+    <p className="empty-text">
+      No source type data available.
+    </p>
+  ) : (
+    <div className="breakdown-list">
+      {metrics.breakdowns.sourceTypes.map((item) => (
+        <div
+          className="breakdown-item"
+          key={item.type}
+        >
+          <span>
+            {item.type.replaceAll("_", " ")}
+          </span>
+
+          <strong>{item.count}</strong>
+        </div>
+      ))}
+    </div>
+  )}
+
+</section>
+
       {/* Source Overview */}
 
 <section className="dashboard-panel source-overview">

@@ -56,6 +56,9 @@ const limit = 20;
     setJobs(data.jobs);
     setTotalPages(data.pagination.totalPages);
     setTotalJobs(data.pagination.total);
+    if (data.jobs.length === 0 && page > 1) {
+        setPage((current) => current - 1);
+      }
   } catch (err) {
     setError(
       err instanceof Error
@@ -89,6 +92,58 @@ const handleViewDetails = async (job: AdminJob) => {
   }
 };
 
+const handleEdit = (job: AdminJob) => {
+  setEditingJob(job);
+  setSelectedJob(null);
+};
+const handleCancelEdit = () => {
+  setEditingJob(null);
+};
+const handleSaveEdit = async () => {
+  if (!editingJob) return;
+
+  try {
+    setEditLoading(true);
+    setError("");
+
+    await adminRequest(
+      `/api/admin/jobs/${editingJob.id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          title: editingJob.title,
+          company: editingJob.company,
+          location: editingJob.location,
+          category: editingJob.category,
+          employmentType: editingJob.employmentType,
+          experienceLevel: editingJob.experienceLevel,
+          education: editingJob.education,
+          salary: editingJob.salary,
+          description: editingJob.description,
+          requirements: editingJob.requirements,
+          applyUrl: editingJob.applyUrl,
+          applyEmail: editingJob.applyEmail,
+          applyPhone: editingJob.applyPhone,
+          isDirectContact: editingJob.isDirectContact,
+        }),
+      }
+    );
+
+    // Refresh the jobs list
+    await loadJobs();
+
+    // Close edit form
+    setEditingJob(null);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Failed to update job"
+    );
+  } finally {
+    setEditLoading(false);
+  }
+};
 const handleToggleStatus = async (job: AdminJob) => {
   const newStatus = !job.isActive;
 
@@ -118,6 +173,38 @@ const handleToggleStatus = async (job: AdminJob) => {
       err instanceof Error
         ? err.message
         : "Failed to update job status"
+    );
+  }
+};
+const handleDeleteJob = async (job: AdminJob) => {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete "${job.title}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setError("");
+
+    await adminRequest(
+      `/api/admin/jobs/${job.id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    // If the deleted job is currently selected
+    if (selectedJob?.id === job.id) {
+      setSelectedJob(null);
+    }
+
+    // Refresh the jobs list
+    await loadJobs();
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Failed to delete job"
     );
   }
 };
@@ -411,6 +498,246 @@ useEffect(() => {
     )}
   </div>
 )}
+
+{editingJob && (
+  <div className="job-edit-panel">
+    <div className="job-edit-header">
+      <div>
+        <h2>Edit Job</h2>
+        <p>Update the job information below.</p>
+      </div>
+
+      <button
+        className="secondary-button"
+        onClick={handleCancelEdit}
+      >
+        Cancel
+      </button>
+    </div>
+
+    <div className="job-edit-form">
+      <div className="form-group">
+        <label>Title</label>
+        <input
+          type="text"
+          value={editingJob.title}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              title: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Company</label>
+        <input
+          type="text"
+          value={editingJob.company}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              company: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Location</label>
+        <input
+          type="text"
+          value={editingJob.location || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              location: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Category</label>
+        <input
+          type="text"
+          value={editingJob.category || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              category: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Employment Type</label>
+        <input
+          type="text"
+          value={editingJob.employmentType || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              employmentType: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Experience Level</label>
+        <select
+          value={editingJob.experienceLevel}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              experienceLevel: e.target.value,
+            })
+          }
+        >
+          <option value="ENTRY">Entry</option>
+          <option value="JUNIOR">Junior</option>
+          <option value="MID">Mid</option>
+          <option value="SENIOR">Senior</option>
+          <option value="NOT_SPECIFIED">Not Specified</option>
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label>Education</label>
+        <input
+          type="text"
+          value={editingJob.education || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              education: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Salary</label>
+        <input
+          type="text"
+          value={editingJob.salary || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              salary: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Description</label>
+        <textarea
+          value={editingJob.description || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              description: e.target.value,
+            })
+          }
+          rows={6}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Requirements</label>
+        <textarea
+          value={editingJob.requirements || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              requirements: e.target.value,
+            })
+          }
+          rows={6}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Application URL</label>
+        <input
+          type="text"
+          value={editingJob.applyUrl || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              applyUrl: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Application Email</label>
+        <input
+          type="email"
+          value={editingJob.applyEmail || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              applyEmail: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Application Phone</label>
+        <input
+          type="text"
+          value={editingJob.applyPhone || ""}
+          onChange={(e) =>
+            setEditingJob({
+              ...editingJob,
+              applyPhone: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="form-group checkbox-group">
+        <label>
+          <input
+            type="checkbox"
+            checked={editingJob.isDirectContact}
+            onChange={(e) =>
+              setEditingJob({
+                ...editingJob,
+                isDirectContact: e.target.checked,
+              })
+            }
+          />
+          Direct contact
+        </label>
+      </div>
+      <div className="edit-form-actions">
+          <button
+            className="secondary-button"
+            onClick={handleCancelEdit}
+            disabled={editLoading}
+          >
+            Cancel
+          </button>
+
+          <button
+            className="primary-button"
+            onClick={handleSaveEdit}
+            disabled={editLoading}
+          >
+            {editLoading ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+    </div>
+  </div>
+)}
       <div className="jobs-table-header">
             <span>
                 {totalJobs} {totalJobs === 1 ? "job" : "jobs"} found
@@ -484,10 +811,23 @@ useEffect(() => {
                     </button>
                     <button
                         className="table-action-button"
+                        onClick={() => handleEdit(job)}
+                      >
+                        Edit
+                    </button>
+                    <button
+                        className="table-action-button"
                         onClick={() => handleToggleStatus(job)}
                         >
                         {job.isActive ? "Deactivate" : "Activate"}
                     </button>
+                    <button
+                        className="table-action-button delete-button"
+                        onClick={() => handleDeleteJob(job)}
+                      >
+                        Delete
+                     </button>
+                    
                     </td>
                 </tr>
               ))}

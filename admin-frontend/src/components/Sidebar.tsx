@@ -7,8 +7,9 @@ const Sidebar = ({ activePage, onNavigate }: SidebarProps) => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard" },
     { id: "jobs", label: "Jobs" },
+    { id: "users", label: "Users" },
     { id: "sources", label: "Sources" },
-    { id: "scraping", label: "Scraping" },
+    //{ id: "scraping", label: "Scraping" },
     { id: "settings", label: "Settings" },
   ];
 

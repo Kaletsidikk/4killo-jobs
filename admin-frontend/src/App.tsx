@@ -6,6 +6,7 @@ import Jobs from "./pages/Jobs";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Sources from "./pages/Sources";
+import Users from "./pages/Users";
 import {
   getAdminToken,
   removeAdminToken,
@@ -34,8 +35,9 @@ function App() {
   const pageTitles: Record<string, string> = {
     dashboard: "Dashboard",
     jobs: "Jobs",
+    users: "Users",
     sources: "Sources",
-    scraping: "Scraping",
+    //scraping: "Scraping",
     settings: "Settings",
   };
 
@@ -61,9 +63,10 @@ function App() {
 
          {activePage === "sources" && <Sources />}
 
-          {activePage === "users" && (
+          {/* {activePage === "users" && (
             <h2>Scraping page coming next</h2>
-          )}
+          )} */}
+          {activePage === "users" && <Users />}
 
           {activePage === "settings" && (
             <h2>Settings page coming next</h2>
