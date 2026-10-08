@@ -284,32 +284,32 @@ export const syncSource = async (req: Request, res: Response): Promise<any> => {
  * Admin: Triggers the background ingestion script to load new data
  * from the scraper's JSON files into the database.
  */
-export const reloadSources = async (req: Request, res: Response): Promise<any> => {
-  try {
-    // We return a 202 Accepted immediately so the frontend doesn't hang
-    // waiting for a potentially long-running seed process.
-    res.status(202).json({ message: 'Data ingestion started in the background.' });
+// export const reloadSources = async (req: Request, res: Response): Promise<any> => {
+//   try {
+//     // We return a 202 Accepted immediately so the frontend doesn't hang
+//     // waiting for a potentially long-running seed process.
+//     res.status(202).json({ message: 'Data ingestion started in the background.' });
 
-    // Execute the seed script in a child process
-    const seedScript = path.resolve(process.cwd(), 'node_modules', '.bin', 'tsx');
-    const seedTarget = path.resolve(process.cwd(), 'prisma', 'seed.ts');
+//     // Execute the seed script in a child process
+//     const seedScript = path.resolve(process.cwd(), 'node_modules', '.bin', 'tsx');
+//     const seedTarget = path.resolve(process.cwd(), 'prisma', 'seed.ts');
     
-    exec(`"${seedScript}" "${seedTarget}"`, (error, stdout, stderr) => {
-      if (error) {
-        console.error('❌ Background Ingestion Failed:', error.message);
-        return;
-      }
-      if (stderr) {
-        console.error('⚠️ Background Ingestion Warnings:', stderr);
-      }
-      console.log('✅ Background Ingestion Succeeded:\n', stdout);
-    });
+//     exec(`"${seedScript}" "${seedTarget}"`, (error, stdout, stderr) => {
+//       if (error) {
+//         console.error('❌ Background Ingestion Failed:', error.message);
+//         return;
+//       }
+//       if (stderr) {
+//         console.error('⚠️ Background Ingestion Warnings:', stderr);
+//       }
+//       console.log('✅ Background Ingestion Succeeded:\n', stdout);
+//     });
 
-  } catch (error) {
-    console.error('Error triggering source reload:', error);
-    // Only sent if it fails before res.status(202)
-    if (!res.headersSent) {
-      return res.status(500).json({ error: 'Failed to trigger reload' });
-    }
-  }
-};
+//   } catch (error) {
+//     console.error('Error triggering source reload:', error);
+//     // Only sent if it fails before res.status(202)
+//     if (!res.headersSent) {
+//       return res.status(500).json({ error: 'Failed to trigger reload' });
+//     }
+//   }
+// };

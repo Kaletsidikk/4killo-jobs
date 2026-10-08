@@ -99,15 +99,17 @@ model User {
 }
 
 model Preference {
-  id              String          @id @default(uuid())
-  userId          String          @unique
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categories      String[]
-  locations       String[]
-  experienceLevel ExperienceLevel @default(ENTRY)
-  instantAlerts   Boolean         @default(true)
-  digestAlerts    Boolean         @default(true)
-  updatedAt       DateTime        @updatedAt
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories        String[]
+  locations         String[]
+  experienceLevel   ExperienceLevel @default(ENTRY)
+  instantAlerts     Boolean         @default(true)
+  digestAlerts      Boolean         @default(true)
+  lastAlertSentAt   DateTime?
+  lastDigestSentAt  DateTime?
+  updatedAt         DateTime        @updatedAt
 }
 
 model SavedJob {

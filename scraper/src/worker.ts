@@ -152,6 +152,7 @@ class UnifiedIngestionWorker {
    */
   public async syncWebPortals() {
     console.log('[Worker:Web] Running scheduled web portal scrape...');
+    const newJobIds: string[] = [];
     try {
       for (const target of WEB_TARGETS) {
         const rawWebJobs = await this.webScraper.scrapeTarget(target, 5);
@@ -163,6 +164,9 @@ class UnifiedIngestionWorker {
           // Persist directly to PostgreSQL as the single source of truth
           if (this.dbPersistence) {
             await this.dbPersistence.persistJob(result.canonicalJob, ingested, result.status);
+            if (result.status === 'CREATED') {
+              newJobIds.push(result.canonicalJob.id);
+            }
           }
 
           if (result.status === 'MERGED') {
@@ -171,6 +175,7 @@ class UnifiedIngestionWorker {
         }
       }
       this.lastWebSync = new Date();
+      await this.notifyBackend(newJobIds);
     } catch (err: any) {
       console.error(`[Worker:Web] Error during web scrape: ${err.message}`);
     }
@@ -183,6 +188,7 @@ class UnifiedIngestionWorker {
     if (!this.client || !this.parser) return;
 
     console.log('[Worker:Telegram] Checking target channels for new posts...');
+    const newJobIds: string[] = [];
     try {
       for (const target of TARGET_CHANNELS) {
         try {
@@ -208,6 +214,9 @@ class UnifiedIngestionWorker {
               // Persist directly to PostgreSQL as the single source of truth
               if (this.dbPersistence) {
                 await this.dbPersistence.persistJob(result.canonicalJob, input, result.status);
+                if (result.status === 'CREATED') {
+                  newJobIds.push(result.canonicalJob.id);
+                }
               }
 
               if (result.status === 'MERGED') {
@@ -220,6 +229,7 @@ class UnifiedIngestionWorker {
         }
       }
       this.lastTelegramSync = new Date();
+      await this.notifyBackend(newJobIds);
     } catch (err: any) {
       console.error(`[Worker:Telegram] Error in Telegram sync: ${err.message}`);
     }
@@ -233,6 +243,31 @@ class UnifiedIngestionWorker {
     const outputPath = path.resolve(__dirname, '../scraped_canonical_jobs.json');
     fs.writeFileSync(outputPath, JSON.stringify(jobs, null, 2), 'utf8');
     console.log(`[Worker] Saved ${jobs.length} canonical jobs to: ${outputPath}`);
+  }
+
+  private async notifyBackend(jobIds: string[]) {
+    if (jobIds.length === 0) return;
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+    const secret = process.env.SCRAPER_WEBHOOK_SECRET || '';
+
+    try {
+      console.log(`[Worker:Notifications] Triggering backend alerts for ${jobIds.length} new jobs...`);
+      // We use axios instead of fetch because fetch might not have TS types in older setups
+      const axios = require('axios');
+      const res = await axios.post(`${backendUrl}/api/notifications/jobs-ingested`, { jobIds }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Scraper-Secret': secret
+        }
+      });
+      if (res.status === 202 || res.status === 200) {
+        console.log('[Worker:Notifications] Alerts triggered successfully.');
+      } else {
+        console.warn(`[Worker:Notifications] Failed to trigger alerts: ${res.status}`);
+      }
+    } catch (err: any) {
+      console.error(`[Worker:Notifications] Error triggering backend alerts: ${err.message}`);
+    }
   }
 
   /**
