@@ -2,9 +2,10 @@ import { Bell, ChevronRight, Database, Globe, Info, SlidersHorizontal } from "lu
 
 interface SettingsProps {
   onSourcesClick: () => void;
+  onPreferencesClick: () => void;
 }
 
-function Settings({ onSourcesClick }: SettingsProps) {
+function Settings({ onSourcesClick, onPreferencesClick }: SettingsProps) {
   return (
     <div className="min-h-screen bg-slate-50 pb-24 text-slate-900">
       {/* Header */}
@@ -28,6 +29,7 @@ function Settings({ onSourcesClick }: SettingsProps) {
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <button
               type="button"
+              onClick={onPreferencesClick}
               className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-4 text-left"
             >
               <div className="flex items-center gap-3">
@@ -160,7 +162,7 @@ function Settings({ onSourcesClick }: SettingsProps) {
 
                 <div>
                   <p className="text-sm font-medium">
-                    About Mela Felagi
+                    About 4 kilo
                   </p>
 
                   <p className="mt-0.5 text-xs text-slate-500">

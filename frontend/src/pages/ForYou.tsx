@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getForYouJobs, getJobs } from "../services/jobs";
-import type { ForYouJob, Job } from "../types/job";
+import { getForYouJobs } from "../services/jobs";
+import type { ForYouJob } from "../types/job";
 
 function ForYou() {
   const [jobs, setJobs] = useState<ForYouJob[]>([]);
@@ -13,42 +13,16 @@ function ForYou() {
         setLoading(true);
         setError(null);
 
-        try {
-          // Real personalised feed.
-          const response = await getForYouJobs();
+        const response = await getForYouJobs();
 
-          setJobs(response.data);
-          return;
-        } catch (authError) {
-          console.log(
-            "For You API unavailable. Using development fallback.",
-            authError
-          );
-        }
-
-        // Development fallback.
-        // GET /jobs is public and does not require Telegram authentication.
-        const response = await getJobs({ limit: 10 });
-
-        const fallbackJobs: ForYouJob[] = response.data.map(
-          (job: Job) => ({
-            ...job,
-            score: 0,
-            matchLabel: "Available",
-            matchReasons: [],
-            applyLink: job.sources[0]?.postUrl ?? null,
-            applyLinkType: "SOURCE",
-          })
-        );
-
-        setJobs(fallbackJobs);
+        setJobs(response.data);
       } catch (err) {
         console.error("Failed to load For You jobs:", err);
 
         setError(
           err instanceof Error
             ? err.message
-            : "Failed to load jobs"
+            : "Failed to load personalized jobs"
         );
       } finally {
         setLoading(false);
@@ -66,7 +40,7 @@ function ForYou() {
         </h1>
 
         <p className="mt-4 text-gray-600">
-          Loading jobs...
+          Loading personalized jobs...
         </p>
       </div>
     );
@@ -101,7 +75,7 @@ function ForYou() {
       {jobs.length === 0 ? (
         <div className="rounded-xl bg-white p-6 text-center">
           <p className="text-gray-600">
-            No jobs available right now.
+            No personalized jobs available right now.
           </p>
         </div>
       ) : (
@@ -150,3 +124,4 @@ function ForYou() {
 }
 
 export default ForYou;
+

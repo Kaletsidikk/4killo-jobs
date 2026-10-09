@@ -10,7 +10,11 @@ import {
   Clock3,
 } from "lucide-react";
 
-import { getJobById } from "../services/jobs";
+import {
+  getJobById,
+  saveJob,
+  unsaveJob,
+} from "../services/jobs";
 import type { Job, JobDetails as JobDetailsType } from "../types/job";
 
 interface JobDetailsProps {
@@ -25,6 +29,8 @@ function JobDetails({
   const [jobDetails, setJobDetails] = useState<JobDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isSaved, setIsSaved] = useState(job.isSaved);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -67,6 +73,24 @@ const getApplyLabel = () => {
   return "View Job Source";
 };
 
+const handleToggleSave = async () => {
+  try {
+    setSaving(true);
+
+    if (isSaved) {
+      await unsaveJob(job.id);
+      setIsSaved(false);
+    } else {
+      await saveJob(job.id);
+      setIsSaved(true);
+    }
+  } catch (err) {
+    console.error("Failed to update saved job:", err);
+  } finally {
+    setSaving(false);
+  }
+};
+
   return (
     <div className="min-h-screen bg-slate-50 pb-28 text-slate-900">
 
@@ -85,18 +109,21 @@ const getApplyLabel = () => {
           <div className="flex items-center gap-2">
 
             <button
-              type="button"
-              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                job.isSaved
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              <Bookmark
-                size={19}
-                fill={job.isSaved ? "currentColor" : "none"}
-              />
-            </button>
+                  type="button"
+                  onClick={handleToggleSave}
+                  disabled={saving}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    isSaved
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-slate-100 text-slate-500"
+                  } disabled:opacity-50`}
+                  aria-label={isSaved ? "Remove saved job" : "Save job"}
+                >
+                  <Bookmark
+                    size={19}
+                    fill={isSaved ? "currentColor" : "none"}
+                  />
+                </button>
 
             {sourceUrl && (
               <button

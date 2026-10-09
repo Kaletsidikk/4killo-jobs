@@ -1,24 +1,67 @@
 import { useEffect, useState } from "react";
-import { Bookmark, MapPin, BriefcaseBusiness } from "lucide-react";
+import {
+  Bookmark,
+  MapPin,
+  BriefcaseBusiness,
+} from "lucide-react";
 import type { Job } from "../types/job";
 import {
-  getLocalSavedJobs,
-  removeLocalSavedJob,
-} from "../services/localSavedJobs";
+  getSavedJobs,
+  unsaveJob,
+} from "../services/jobs";
 
 function Saved() {
   const [savedJobs, setSavedJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [removingJobId, setRemovingJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    setSavedJobs(getLocalSavedJobs());
+    const loadSavedJobs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await getSavedJobs();
+
+        setSavedJobs(response.data);
+      } catch (err) {
+        console.error("Failed to load saved jobs:", err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load saved jobs"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSavedJobs();
   }, []);
 
-  const handleRemove = (jobId: string) => {
-    removeLocalSavedJob(jobId);
+  const handleRemove = async (jobId: string) => {
+    try {
+      setRemovingJobId(jobId);
+      setError(null);
 
-    setSavedJobs((currentJobs) =>
-      currentJobs.filter((job) => job.id !== jobId)
-    );
+      await unsaveJob(jobId);
+
+      setSavedJobs((currentJobs) =>
+        currentJobs.filter((job) => job.id !== jobId)
+      );
+    } catch (err) {
+      console.error("Failed to remove saved job:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to remove saved job"
+      );
+    } finally {
+      setRemovingJobId(null);
+    }
   };
 
   return (
@@ -36,7 +79,23 @@ function Saved() {
 
       {/* Jobs */}
       <main className="space-y-3 px-5 py-5">
-        {savedJobs.length === 0 ? (
+        {loading ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+            <p className="text-sm text-slate-500">
+              Loading saved jobs...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-red-200 bg-white p-8 text-center">
+            <h2 className="text-sm font-semibold text-red-600">
+              Failed to load saved jobs
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-500">
+              {error}
+            </p>
+          </div>
+        ) : savedJobs.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
               <Bookmark
@@ -75,7 +134,8 @@ function Saved() {
                 <button
                   type="button"
                   onClick={() => handleRemove(job.id)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"
+                  disabled={removingJobId === job.id}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={`Remove ${job.title} from saved jobs`}
                 >
                   <Bookmark
@@ -112,3 +172,4 @@ function Saved() {
 }
 
 export default Saved;
+

@@ -16,22 +16,14 @@ import {
   UserRound,
 } from "lucide-react";
 
-// import { 
-//   getJobs, 
-//   getJobCategories,
-//   saveJob,
-//   unsaveJob, } from "../services/jobs";
 
 import {
   getJobs,
   getJobCategories,
+  saveJob,
+  unsaveJob,
 } from "../services/jobs";
 
-import {
-  saveJobLocally,
-  removeLocalSavedJob,
-  isLocalJobSaved,
-} from "../services/localSavedJobs";
 import type { Job } from "../types/job";
 interface HomeProps {
   onJobSelect: (job: Job) => void;
@@ -168,12 +160,13 @@ console.log("Voxide voice messages:", messages);
 //   }
 // };
 
-const handleToggleSave = (job: Job) => {
+
+const handleToggleSave = async (job: Job) => {
   try {
-    if (isLocalJobSaved(job.id)) {
-      removeLocalSavedJob(job.id);
+    if (job.isSaved) {
+      await unsaveJob(job.id);
     } else {
-      saveJobLocally(job);
+      await saveJob(job.id);
     }
 
     setJobs((currentJobs) =>
@@ -187,9 +180,11 @@ const handleToggleSave = (job: Job) => {
       )
     );
   } catch (err) {
-    console.error("Failed to update saved job locally:", err);
+    console.error("Failed to update saved job:", err);
   }
 };
+
+
 
   useEffect(() => {
   const loadCategories = async () => {
