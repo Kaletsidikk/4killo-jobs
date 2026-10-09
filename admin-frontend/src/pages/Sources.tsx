@@ -30,6 +30,12 @@ const [sourceDetails, setSourceDetails] =
 
 const [detailsLoading, setDetailsLoading] =
   useState(false);
+  const [syncingSourceId, setSyncingSourceId] =
+  useState<Source["id"] | null>(null);
+  const [updatingStatusSourceId, setUpdatingStatusSourceId] =
+  useState<Source["id"] | null>(null);
+  const [deletingSourceId, setDeletingSourceId] =
+  useState<Source["id"] | null>(null);
 
   const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState("");
@@ -184,6 +190,7 @@ const handleToggleStatus = async (source: Source) => {
     source.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
 
   try {
+    setUpdatingStatusSourceId(source.id);
     setError("");
 
     await adminRequest<Source>(
@@ -203,11 +210,15 @@ const handleToggleStatus = async (source: Source) => {
         ? err.message
         : "Failed to update source status"
     );
-  }
+  }finally { setUpdatingStatusSourceId(null); 
+
+    }
+  
 };
 
 const handleSyncSource = async (source: Source) => {
   try {
+    setSyncingSourceId(source.id);
     setError("");
 
     await adminRequest<Source>(
@@ -218,12 +229,20 @@ const handleSyncSource = async (source: Source) => {
     );
 
     await loadSources();
+    if (selectedSource?.id === source.id) {
+  setSelectedSource({
+    ...source,
+    lastSyncAt: new Date().toISOString(),
+  });
+}
   } catch (err) {
     setError(
       err instanceof Error
         ? err.message
         : "Failed to sync source"
     );
+  }
+    finally { setSyncingSourceId(null);
   }
 };
 
@@ -237,6 +256,7 @@ const handleDeleteSource = async (source: Source) => {
   }
 
   try {
+    setDeletingSourceId(source.id);
     setError("");
 
     await adminRequest(
@@ -253,6 +273,8 @@ const handleDeleteSource = async (source: Source) => {
         ? err.message
         : "Failed to delete source"
     );
+  }finally { setDeletingSourceId(null); 
+
   }
 };
 
@@ -519,11 +541,9 @@ if (error && initialLoading) {
         <div className="source-detail-item">
           <span>Last Sync</span>
           <strong>
-            {sourceDetails.source?.lastSyncAt
-              ? new Date(
-                  sourceDetails.source.lastSyncAt
-                ).toLocaleString()
-              : "Never"}
+            {selectedSource.lastSyncAt
+      ? new Date(selectedSource.lastSyncAt).toLocaleString()
+      : "Never"}
           </strong>
         </div>
 
@@ -636,21 +656,23 @@ if (error && initialLoading) {
                       <button
                         className="table-action-button"
                         onClick={() => handleToggleStatus(source)}
-                        disabled={source.status === "ERROR"}
+                        disabled={source.status === "ERROR" || updatingStatusSourceId === source.id}
                         >
-                        {source.status === "ACTIVE" ? "Pause" : "Activate"}
+                        {updatingStatusSourceId === source.id ? source.status === "ACTIVE" ? "Pausing..." : "Activating..." : source.status === "ACTIVE" ? "Pause" : "Activate"}
                       </button>
                       <button
                         className="table-action-button"
                         onClick={() => handleSyncSource(source)}
+                        disabled={syncingSourceId === source.id}
                         >
-                        Sync
+                        {syncingSourceId === source.id ? "Syncing..." : "Sync"}
                       </button>
                       <button
                         className="delete-button"
                         onClick={() => handleDeleteSource(source)}
+                        disabled={deletingSourceId !== null}
                         >
-                        Delete
+                        {deletingSourceId === source.id ? "Deleting..." : "Delete"}
                      </button>
                   </td>
                 </tr>

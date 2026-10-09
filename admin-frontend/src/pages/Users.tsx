@@ -61,6 +61,7 @@ function Users() {
   const [languageFilter, setLanguageFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsLoadingId, setDetailsLoadingId] = useState<string | null>(null);
 
 const limit = 20;
   const loadUsers = async () => {
@@ -100,6 +101,7 @@ const limit = 20;
   const handleViewDetails = async (user: AdminUser) => {
   try {
     setDetailsLoading(true);
+    setDetailsLoadingId(user.id);
     setError("");
     setSelectedUser(null);
 
@@ -116,6 +118,7 @@ const limit = 20;
     );
   } finally {
     setDetailsLoading(false);
+    setDetailsLoadingId(null);
   }
 };
 
@@ -414,8 +417,9 @@ const limit = 20;
                 <button
                     className="table-action-button"
                     onClick={() => handleViewDetails(user)}
+                    disabled={detailsLoadingId === user.id}
                 >
-                    View
+                     {detailsLoadingId === user.id ? "Loading..." : "View"}
                 </button>
             </td>
           </tr>

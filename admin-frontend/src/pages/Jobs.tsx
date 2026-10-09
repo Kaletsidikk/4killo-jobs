@@ -21,6 +21,10 @@ const [experienceFilter, setExperienceFilter] = useState("");
 
 const [editingJob, setEditingJob] = useState<AdminJob | null>(null);
 const [editLoading, setEditLoading] = useState(false);
+const [statusLoadingId, setStatusLoadingId] = useState<AdminJob["id"] | null>(null);
+const [deleteLoadingId, setDeleteLoadingId] = useState<AdminJob["id"] | null>(null);
+const [detailsLoadingId, setDetailsLoadingId] = useState<AdminJob["id"] | null>(null);
+const [refreshing, setRefreshing] = useState(false);
 
 const [page, setPage] = useState(1);
 const [totalPages, setTotalPages] = useState(1);
@@ -75,6 +79,7 @@ const limit = 20;
 const handleViewDetails = async (job: AdminJob) => {
   try {
     setDetailsLoading(true);
+    setDetailsLoadingId(job.id);
     setError("");
     setSelectedJob(job);
 
@@ -91,6 +96,7 @@ const handleViewDetails = async (job: AdminJob) => {
     );
   } finally {
     setDetailsLoading(false);
+    setDetailsLoadingId(null);
   }
 };
 
@@ -150,6 +156,7 @@ const handleToggleStatus = async (job: AdminJob) => {
   const newStatus = !job.isActive;
 
   try {
+    setStatusLoadingId(job.id);
     setError("");
 
     await adminRequest(
@@ -176,7 +183,7 @@ const handleToggleStatus = async (job: AdminJob) => {
         ? err.message
         : "Failed to update job status"
     );
-  }
+  }finally { setStatusLoadingId(null); }
 };
 const handleDeleteJob = async (job: AdminJob) => {
   const confirmed = window.confirm(
@@ -186,6 +193,7 @@ const handleDeleteJob = async (job: AdminJob) => {
   if (!confirmed) return;
 
   try {
+    setDeleteLoadingId(job.id);
     setError("");
 
     await adminRequest(
@@ -208,7 +216,7 @@ const handleDeleteJob = async (job: AdminJob) => {
         ? err.message
         : "Failed to delete job"
     );
-  }
+  }finally { setDeleteLoadingId(null); }
 };
 
 useEffect(() => {
@@ -810,8 +818,9 @@ useEffect(() => {
                     <button
                         className="table-action-button"
                         onClick={() => handleViewDetails(job)}
+                        disabled={detailsLoadingId === job.id}
                     >
-                        Details
+                        {detailsLoadingId === job.id ? "Loading..." : "Details"}
                     </button>
                     <button
                         className="table-action-button"
@@ -822,14 +831,20 @@ useEffect(() => {
                     <button
                         className="table-action-button"
                         onClick={() => handleToggleStatus(job)}
+                        disabled={statusLoadingId === job.id}
                         >
-                        {job.isActive ? "Deactivate" : "Activate"}
+                        {statusLoadingId === job.id
+                                ? "Updating..."
+                                : job.isActive
+                                  ? "Deactivate"
+                                  : "Activate"}
                     </button>
                     <button
                         className="table-action-button delete-button"
                         onClick={() => handleDeleteJob(job)}
+                        disabled={deleteLoadingId === job.id}
                       >
-                        Delete
+                        {deleteLoadingId === job.id ? "Deleting..." : "Delete"}
                      </button>
                     
                     </td>
