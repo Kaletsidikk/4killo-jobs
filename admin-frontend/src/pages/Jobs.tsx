@@ -24,7 +24,7 @@ const [editLoading, setEditLoading] = useState(false);
 const [statusLoadingId, setStatusLoadingId] = useState<AdminJob["id"] | null>(null);
 const [deleteLoadingId, setDeleteLoadingId] = useState<AdminJob["id"] | null>(null);
 const [detailsLoadingId, setDetailsLoadingId] = useState<AdminJob["id"] | null>(null);
-const [refreshing, setRefreshing] = useState(false);
+
 
 const [page, setPage] = useState(1);
 const [totalPages, setTotalPages] = useState(1);
